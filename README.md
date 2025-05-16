@@ -29,8 +29,12 @@ This project is part of Challenge 2 in the 0HM400 course at TU/e, focusing on me
 - Lilian Oei
 - Sammy Hamwi
 
-> Project Owner: Dr. Suzanne Groothuijsen, TU/e Education and Student Affairs
-> Project Mentor 1: Dr. Uwe Matzat, TU/e Industrial Engineering and Innovation Sciences
-> Project Mentor 2: Nithila Ramesh, PhD Candidate, TU/e Industrial Engineering and Innovation Sciences
-> RShiny Dashboard Template developed by: Dr. Rianne Conijn, TU/e Industrial Engineering and Innovation Sciences
-> TU/e Human-Technology Interaction Learning Analytics Team
+## Acknowledgments
+
+| Role                          | Name & Affiliation                                                                 |
+|-------------------------------|-------------------------------------------------------------------------------------|
+| **Project Owner**             | Dr. Suzanne Groothuijsen, TU/e Education and Student Affairs                       |
+| **Project Mentor**            | Dr. Uwe Matzat, TU/e Industrial Engineering and Innovation Sciences                |
+| **Project Mentor**            | Nithila Ramesh, PhD Candidate, TU/e Industrial Engineering and Innovation Sciences |
+| **RShiny Template Developer** | Dr. Rianne Conijn, TU/e Industrial Engineering and Innovation Sciences             |
+| **Support Team**             | TU/e Human-Technology Interaction Learning Analytics Team                          |
