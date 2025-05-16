@@ -33,8 +33,8 @@ This project is part of Challenge 2 in the 0HM400 course at TU/e, focusing on me
 
 | Role                          | Name & Affiliation                                                                 |
 |-------------------------------|-------------------------------------------------------------------------------------|
-| **Project Owner**             | _Dr. Suzanne Groothuijsen_, TU/e Education and Student Affairs                       |
-| **Project Mentor**            | _Dr. Uwe Matzat_, TU/e Industrial Engineering and Innovation Sciences                |
-| **Project Mentor**            | _Nithila Ramesh_, PhD Candidate, TU/e Industrial Engineering and Innovation Sciences |
-| **RShiny Template Developer** | _Dr. Rianne Conijn_, TU/e Industrial Engineering and Innovation Sciences             |
-| **Support Team**             | TU/e Human-Technology Interaction Learning Analytics Team                          |
+| Project Owner             | _Dr. Suzanne Groothuijsen_, TU/e Education and Student Affairs                       |
+| Project Mentor            | _Dr. Uwe Matzat_, TU/e Industrial Engineering and Innovation Sciences                |
+| Project Mentor            | _Nithila Ramesh_, PhD Candidate, TU/e Industrial Engineering and Innovation Sciences |
+| RShiny Template Developer | _Dr. Rianne Conijn_, TU/e Industrial Engineering and Innovation Sciences             |
+| Support Team             | TU/e Human-Technology Interaction Learning Analytics Team                          |
