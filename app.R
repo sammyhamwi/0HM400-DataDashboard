@@ -50,13 +50,21 @@ ui <- fluidPage(
                       ),
                       div(class = "card p-3",
                           div(class = "section-title", "Reflections"),
-                          sliderInput("satisfaction", "How satisfied were you this week?", min = 1, max = 10, value = 7),
-                          sliderInput("expectation", "What do you expect next week?", min = 1, max = 10, value = 8),
-                          HTML("
-                              <div class='alert alert-warning mt-3'>
-                                🏅 <strong>5 Week Streak!</strong> Reflection badge for 5 submissions in a row.
-                              </div>
-                            ")
+                          selectInput("selected_week", "Select Week", choices = 1:10, selected = 1),
+                          uiOutput("satisfaction_ui"),
+                          
+                          uiOutput("expectation_ui"),
+                          
+                          uiOutput("save_button_ui"),
+                          
+                          br(),
+                          # Feedback message
+                          div(
+                            class = "text-muted mb-3",
+                            textOutput("satisfaction_feedback"),
+                          ),
+                          
+                          uiOutput("streak_badge")
                       )
                   ),
                   div(class = "col-md-6",
@@ -79,6 +87,87 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   course_id <- reactive({ input$cId })
   user_id <- reactive({ user_id_value })
+  
+  # Storage for satisfaction ratings by week
+  satisfaction_ratings <- reactiveValues(data = list())
+  expectation_ratings <- reactiveValues(data = list())
+  
+  # Text feedback message
+  satisfaction_feedback_store <- reactiveValues(data = list())
+  
+  # Reflection count
+  save_count <- reactiveValues(count = 0)
+  
+  # Simulate current week
+  current_week <- reactive({ as.numeric(input$selected_week) })
+  
+  # Track saved weeks
+  reflection_saved <- reactiveValues(data = list())
+  
+  observeEvent(input$save_rating, {
+    save_count$count <- save_count$count + 1
+    course <- as.character(input$cId)
+    this_week <- as.character(input$selected_week)
+    last_week <- as.character(as.numeric(input$selected_week) - 1)
+    
+    # Initialize if first time this course
+    if (is.null(satisfaction_ratings$data[[course]])) satisfaction_ratings$data[[course]] <- list()
+    if (is.null(expectation_ratings$data[[course]])) expectation_ratings$data[[course]] <- list()
+    
+    # Save current week's ratings
+    satisfaction_ratings$data[[course]][[this_week]] <- input$satisfaction
+    expectation_ratings$data[[course]][[this_week]] <- input$expectation
+    
+    # Mark this week as saved
+    if (is.null(reflection_saved$data[[course]])) reflection_saved$data[[course]] <- list()
+    reflection_saved$data[[course]][[this_week]] <- TRUE
+    feedback <- ""
+    
+    # Last week's expectation
+    last_week_expectation <- expectation_ratings$data[[course]][[last_week]]
+    
+    if (!is.null(last_week_expectation)) {
+      if (input$satisfaction > last_week_expectation) {
+        feedback <- "You exceeded your expectations! Great job. What do you think contributed to this?"
+      } else if (input$satisfaction < last_week_expectation) {
+        feedback <- "You didn’t quite meet your expectations. Think about what barriers might have affected your progress."
+      } else {
+        feedback <- "Your satisfaction aligned with your expectations. This suggests a good sense of self-awareness."
+      }
+    }
+    
+    if (input$expectation > input$satisfaction) {
+      feedback <- paste(feedback, "You’re aiming higher for next week. What’s your plan to get there?")
+    } else if (input$expectation < input$satisfaction) {
+      feedback <- paste(feedback, "It seems you’re not expecting to maintain this level. Is something changing next week?")
+    } else {
+      feedback <- paste(feedback, "You’re expecting similar satisfaction next week. Do you feel you’ve found a stable rhythm?")
+    }
+    
+    if (is.null(satisfaction_feedback_store$data[[course]])) {
+      satisfaction_feedback_store$data[[course]] <- list()
+    }
+    satisfaction_feedback_store$data[[course]][[this_week]] <- feedback
+    output$satisfaction_feedback <- renderText({ feedback })
+    
+  })
+  observeEvent(input$selected_week, {
+    course <- as.character(input$cId)
+    week <- as.character(input$selected_week)
+    
+    # Show saved feedback if it exists for this course/week
+    if (!is.null(satisfaction_feedback_store$data[[course]]) &&
+        !is.null(satisfaction_feedback_store$data[[course]][[week]])) {
+      
+      feedback <- satisfaction_feedback_store$data[[course]][[week]]
+      output$satisfaction_feedback <- renderText({ feedback })
+      
+    } else {
+      # No saved reflection/feedback for this week → clear output
+      output$satisfaction_feedback <- renderText({ "" })
+    }
+  })
+  
   
   output$selectedUserId <- renderText({
     paste("Welcome", user_id(), "!")
@@ -151,6 +240,86 @@ server <- function(input, output, session) {
         yaxis = list(title = "Activity Count"),
         hovermode = "x unified"
       )
+  })
+  
+  output$satisfaction_feedback <- renderText({
+    satisfaction_feedback()
+  })
+  
+  output$satisfaction_ui <- renderUI({
+    course <- as.character(input$cId)
+    week <- as.character(input$selected_week)
+    saved <- !is.null(reflection_saved$data[[course]][[week]]) && reflection_saved$data[[course]][[week]]
+    
+    if (saved) {
+      value <- satisfaction_ratings$data[[course]][[week]]
+      div(class = "form-control-plaintext", paste("Self-Reported Satisfaction Score:", value))
+    } else {
+      sliderInput("satisfaction", "How satisfied are you with your learning progress this week?", min = 1, max = 10, value = 5)
+    }
+  })
+  
+  output$expectation_ui <- renderUI({
+    course <- as.character(input$cId)
+    week <- as.character(input$selected_week)
+    saved <- !is.null(reflection_saved$data[[course]][[week]]) && reflection_saved$data[[course]][[week]]
+    
+    if (saved) {
+      value <- expectation_ratings$data[[course]][[week]]
+      div(class = "form-control-plaintext", paste("Expected Progress Satisfaction:", value))
+    } else {
+      sliderInput("expectation", "How satisfied do you expect to be with your learning progress next week?", min = 1, max = 10, value = 5)
+    }
+  })
+  
+  output$save_button_ui <- renderUI({
+    course <- as.character(input$cId)
+    week <- as.character(input$selected_week)
+    saved <- !is.null(reflection_saved$data[[course]][[week]]) && reflection_saved$data[[course]][[week]]
+    
+    if (!saved) {
+      actionButton("save_rating", "Save Reflection", class = "btn btn-primary mt-2")
+    } else {
+      NULL  # No button if already saved
+    }
+  })
+  
+  
+  
+  output$streak_badge <- renderUI({
+    course <- as.character(input$cId)
+    week <- as.numeric(input$selected_week)
+    
+    # Don't show badge unless this week has a saved reflection
+    if (is.null(reflection_saved$data[[course]]) || is.null(reflection_saved$data[[course]][[as.character(week)]]) || !reflection_saved$data[[course]][[as.character(week)]]) {
+      return(NULL)
+    }
+    
+    # Find all submitted weeks up to the selected week
+    submitted_weeks <- sort(as.numeric(names(satisfaction_ratings$data[[course]])))
+    submitted_weeks <- submitted_weeks[submitted_weeks <= week]
+    
+    if (length(submitted_weeks) == 0) return(NULL)
+    
+    # Walk backward from selected week to calculate streak ending at that week
+    streak <- 0
+    for (w in week:1) {
+      if (w %in% submitted_weeks) {
+        streak <- streak + 1
+      } else {
+        break
+      }
+    }
+    
+    if (streak >= 2) {
+      HTML(sprintf("
+      <div class='alert alert-warning mt-3'>
+        🏅 <strong>%d Week Streak!</strong> Reflection badge for %d consecutive submissions.
+      </div>
+    ", streak, streak))
+    } else {
+      return(NULL)
+    }
   })
   
 }
