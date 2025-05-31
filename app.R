@@ -365,6 +365,10 @@ server <- function(input, output, session) {
   
   output$activityTracker <- renderUI({
     req(user_id())
+    course_id <- course_id()
+    
+    week1_reflected <- isTRUE(reflection_saved$data[[course_id]][["1"]])
+    week2_reflected <- isTRUE(reflection_saved$data[[course_id]][["2"]])
     
     query <- sprintf("
       SELECT COUNT(*) > 0 AS quiz_submitted_in_week
@@ -380,15 +384,15 @@ server <- function(input, output, session) {
     
     activities <- list(
       list(name = "Submit Week 1 Quiz", done = week1_quiz_done),
-      list(name = "Reflect on Week 1", done = TRUE),
+      list(name = "Reflect on Week 1", done = week1_reflected),
       list(name = "Complete Reading", done = FALSE),
       list(name = "Submit Week 2 Quiz", done = FALSE),
-      list(name = "Reflect on Week 2", done = FALSE)
+      list(name = "Reflect on Week 2", done = week2_reflected)
     )
     
     total <- length(activities)
     completed <- sum(sapply(activities, function(x) x$done))
-    percent <- round((completed / total) * 100)
+    percent <- 20 * sum(sapply(activities, function(x) x$done))
     
     list_items <- paste0(
       "<ul class='list-group mb-3'>",
