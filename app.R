@@ -24,7 +24,7 @@ ui <- fluidPage(
     
     .badge-container {
       display: flex;
-      flex-direction: row-reverse;
+      flex-direction: row;
       justify-content: flex-end;
       align-items: center;
       gap: 30px;
@@ -594,8 +594,19 @@ server <- function(input, output, session) {
   })
   
   output$badges <- renderUI({
-    # Retrieve the save_count (assuming it’s reactive and available)
-    count <- save_count$count
+    req(user_id(), course_id())
+    
+    course <- as.character(course_id())
+    reflections <- reflection_saved$data[[course]]
+    
+    reflection_count <- if (!is.null(reflections)) {
+      sum(unlist(reflections), na.rm = TRUE)
+      } else {
+      0
+      }
+    
+    # Optional debug line to Console
+    print(paste("Reflection count for course", course, ":", reflection_count))
     
     # Prepare badge info as a list of lists, each with unlock threshold, unlocked image + tooltip, and locked tooltip
     badges <- list(
@@ -624,7 +635,7 @@ server <- function(input, output, session) {
     
     # Loop through each badge, check if unlocked, show correct image and tooltip
     for (b in badges) {
-      if (count >= b$threshold) {
+      if (reflection_count >= b$threshold) {
         # Unlocked badge
         badge_html <- paste0(
           badge_html,
