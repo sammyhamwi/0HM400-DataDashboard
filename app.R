@@ -10,26 +10,74 @@ ui <- fluidPage(
   tags$head(
     tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"),
     tags$style(HTML("
-      body { background-color: #f8f9fa; font-family: system-ui; }
-      .card { border-radius: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,0.05); margin-bottom: 1rem; }
-      .section-title { font-weight: 600; font-size: 1.2rem; margin-bottom: 0.75rem; }
-      .sidebar { background-color: #ffffff; height: 100vh; padding: 1.5rem; border-right: 1px solid #ddd; }
-      .sidebar h5 { margin-bottom: 1rem; }
-      .main-content { padding: 2rem; }
-      .header-banner { background-color: #007bff; color: white; padding: 1rem 2rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
-      .header-banner h3 { margin: 0; }
-      .login-card { max-width: 400px; margin: 100px auto; padding: 2rem; }
-    "))
+    body { background-color: #f8f9fa; font-family: system-ui; }Add commentMore actions
+    .card { border-radius: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,0.05); margin-bottom: 1rem; }
+    .section-title { font-weight: 600; font-size: 1.2rem; margin-bottom: 0.75rem; }
+    .irs-grid-text, .irs-min, .irs-max { display: none !important; }
+    .irs--shiny .irs-grid { display: none !important; }
+    
+    .badge-container {
+      display: flex;
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 30px;
+      flex-wrap: nowrap;
+      transition: all 0.3s ease;
+      min-width: 300px;
+    }
+
+    .badge-item {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .badge-item:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0,0,0,0.75);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      font-size: 14px;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+      z-index: 1000;
+    }
+
+    .badge-item::after {
+      content: '';
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .card {
+  overflow-x: auto;  /* allows horizontal scrolling if badges exceed width */
+  /* or use overflow: hidden; if you want to just clip overflow */
+  padding: 1rem;
+  position: relative; /* helps with positioned children */
+    }
+.card, .col-md-6, .col-md-9, .row {
+    overflow: visible !important;
+    position: relative;
+}
+
+  "))
   ),
   uiOutput("mainUI")  # dynamically switch between login and app UI
 )
 
 server <- function(input, output, session) {
   credentials <- reactiveValues(logged_in = FALSE, user_id = NULL, date = NULL)
-
+  
   `%||%` <- function(a, b) if (!is.null(a)) a else b
   
- observeEvent(input$login_button, {
+  observeEvent(input$login_button, {
     req(input$user_id_input, input$date_input)
     
     credentials$logged_in <- TRUE
@@ -152,7 +200,7 @@ server <- function(input, output, session) {
                         )
                     ),
                     div(class = "card p-3",
-                        div(class = "section-title", "Badge Tab"),
+                        div(class = "section-title", "Badges"),
                         uiOutput("badges")
                     )
                   )
@@ -305,12 +353,6 @@ server <- function(input, output, session) {
     return(list())
   }
   
->>>>>>> lilian-dev
-=======
-    
-  })
-  
->>>>>>> main
   observeEvent(input$selected_week, {
     course <- as.character(input$cId)
     week <- as.character(input$selected_week)
@@ -320,13 +362,10 @@ server <- function(input, output, session) {
         !is.null(satisfaction_feedback_store$data[[course]][[week]])) {
       
       feedback <- satisfaction_feedback_store$data[[course]][[week]]
-<<<<<<< HEAD
       output$satisfaction_feedback <- renderText({
         satisfaction_feedback_store$data[[course]][[week]] %||% ""
       })
-=======
-      output$satisfaction_feedback <- renderText({ feedback })
->>>>>>> main
+      
       
     } else {
       # No saved reflection/feedback for this week → clear output
@@ -334,7 +373,6 @@ server <- function(input, output, session) {
     }
   })
   
-<<<<<<< HEAD
   observeEvent(input$cId, {
     course <- as.character(input$cId)
     week <- as.character(input$selected_week)
@@ -351,7 +389,8 @@ server <- function(input, output, session) {
       output$satisfaction_feedback <- renderText({ "" })
     }
   })
-
+  
+  
   output$selectedUserId <- renderText({
     course_id_value <- course_id()
     user_id_value <- user_id()
@@ -373,18 +412,36 @@ server <- function(input, output, session) {
   })
   
   output$activityTracker <- renderUI({
+    req(user_id())
+    course_id <- course_id()
+    
+    week1_reflected <- isTRUE(reflection_saved$data[[course_id]][["1"]])
+    week2_reflected <- isTRUE(reflection_saved$data[[course_id]][["2"]])
+    
+    query <- sprintf("
+      SELECT COUNT(*) > 0 AS quiz_submitted_in_week
+      FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
+      WHERE user_id = '%s'
+        AND workflow_state IN ('pending_review', 'complete')
+        AND finished_at_anonymous >= '2024-11-27 08:00:00.000'
+        AND finished_at_anonymous < '2024-11-27 09:00:00.000';
+    ", user_id())
+
+    result <- dbGetQuery(sc, query)
+    week1_quiz_done <- result$quiz_submitted_in_week[1]
+    
     activities <- list(
-      list(name = "Submit Week 1 Quiz", done = TRUE),
-      list(name = "Reflect on Week 1", done = TRUE),
+      list(name = "Submit Week 1 Quiz", done = week1_quiz_done),
+      list(name = "Reflect on Week 1", done = week1_reflected),
       list(name = "Complete Reading", done = FALSE),
       list(name = "Submit Week 2 Quiz", done = FALSE),
-      list(name = "Reflect on Week 2", done = FALSE)
+      list(name = "Reflect on Week 2", done = week2_reflected)
     )
-
+    
     total <- length(activities)
     completed <- sum(sapply(activities, function(x) x$done))
     percent <- 20 * sum(sapply(activities, function(x) x$done))
-
+    
     list_items <- paste0(
       "<ul class='list-group mb-3'>",
       paste(sapply(activities, function(x) {
@@ -456,10 +513,6 @@ server <- function(input, output, session) {
       )
   })
   
-  output$satisfaction_feedback <- renderText({
-    satisfaction_feedback()
-  })
-  
   output$satisfaction_ui <- renderUI({
     course <- as.character(input$cId)
     week <- as.character(input$selected_week)
@@ -494,7 +547,7 @@ server <- function(input, output, session) {
     if (!saved) {
       actionButton("save_rating", "Save Reflection", class = "btn btn-primary mt-2")
     } else {
-      NULL  # No button if already saved
+      actionButton("refresh_rating", "Update Reflection", class = "btn btn-primary mt-2")
     }
   })
   
@@ -534,6 +587,60 @@ server <- function(input, output, session) {
     }
   })
   
+  output$badges <- renderUI({Add commentMore actions
+    # Retrieve the save_count (assuming it’s reactive and available)
+    count <- save_count$count
+    
+    # Prepare badge info as a list of lists, each with unlock threshold, unlocked image + tooltip, and locked tooltip
+    badges <- list(
+      list(
+        threshold = 1,
+        unlocked_img = "ROOKIE.png",
+        unlocked_tooltip = "Your first reflection - Nice start!",
+        locked_tooltip = "Reflect for the first time."
+      ),
+      list(
+        threshold = 4,
+        unlocked_img = "CONSISTENT.png",
+        unlocked_tooltip = "4 week of reflections - Keep reflecting!",
+        locked_tooltip = "Reflect for 4 weeks."
+      ),
+      list(
+        threshold = 8,
+        unlocked_img = "MASTER.png",
+        unlocked_tooltip = "8 Weeks of reflecting?! - Good job!",
+        locked_tooltip = "Reflect for 8 weeks."
+      )
+    )
+    
+    # Start building the HTML
+    badge_html <- "<p><strong>Your Reflection Badges</strong></p><div class='badge-container'>"
+    
+    # Loop through each badge, check if unlocked, show correct image and tooltip
+    for (b in badges) {
+      if (count >= b$threshold) {
+        # Unlocked badge
+        badge_html <- paste0(
+          badge_html,
+          "<span class='badge-item' data-tooltip='", b$unlocked_tooltip, "'>",
+          "<img src='", b$unlocked_img, "' height='90px'/>",
+          "</span>"
+        )
+      } else {
+        # Locked badge with QUESTION.png and hint tooltip
+        badge_html <- paste0(
+          badge_html,
+          "<span class='badge-item' data-tooltip='", b$locked_tooltip, "'>",
+          "<img src='QUESTION.png' height='90px'/>",
+          "</span>"
+        )
+      }
+    }
+    
+    badge_html <- paste0(badge_html, "</div>")
+    
+    HTML(badge_html)Add commentMore actions
+  })
 }
 
 shinyApp(ui, server)
