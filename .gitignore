@@ -50,3 +50,14 @@ rsconnect/
 
 # RStudio-RShiny project enviroment file
 Shiny_dashboard.Rproj
+
+# Ignore all .DS_Store files recursively
+**/.DS_Store
+
+# Ignore all connect.R files recursively
+**/connect.R
+
+# Ignore all all_users_data.json files recursively
+**/all_users_data.json
+
+
