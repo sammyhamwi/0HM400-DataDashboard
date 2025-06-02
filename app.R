@@ -26,7 +26,7 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   credentials <- reactiveValues(logged_in = FALSE, user_id = NULL, date = NULL)
-  
+
   `%||%` <- function(a, b) if (!is.null(a)) a else b
   
  observeEvent(input$login_button, {
@@ -306,6 +306,11 @@ server <- function(input, output, session) {
   }
   
 >>>>>>> lilian-dev
+=======
+    
+  })
+  
+>>>>>>> main
   observeEvent(input$selected_week, {
     course <- as.character(input$cId)
     week <- as.character(input$selected_week)
@@ -315,9 +320,13 @@ server <- function(input, output, session) {
         !is.null(satisfaction_feedback_store$data[[course]][[week]])) {
       
       feedback <- satisfaction_feedback_store$data[[course]][[week]]
+<<<<<<< HEAD
       output$satisfaction_feedback <- renderText({
         satisfaction_feedback_store$data[[course]][[week]] %||% ""
       })
+=======
+      output$satisfaction_feedback <- renderText({ feedback })
+>>>>>>> main
       
     } else {
       # No saved reflection/feedback for this week → clear output
@@ -325,6 +334,7 @@ server <- function(input, output, session) {
     }
   })
   
+<<<<<<< HEAD
   observeEvent(input$cId, {
     course <- as.character(input$cId)
     week <- as.character(input$selected_week)
@@ -341,9 +351,7 @@ server <- function(input, output, session) {
       output$satisfaction_feedback <- renderText({ "" })
     }
   })
-  
-  
->>>>>>> lilian-dev
+
   output$selectedUserId <- renderText({
     course_id_value <- course_id()
     user_id_value <- user_id()
@@ -365,33 +373,14 @@ server <- function(input, output, session) {
   })
   
   output$activityTracker <- renderUI({
-    req(user_id())
-    course_id <- course_id()
-    
-    week1_reflected <- isTRUE(reflection_saved$data[[course_id]][["1"]])
-    week2_reflected <- isTRUE(reflection_saved$data[[course_id]][["2"]])
-    
-    query <- sprintf("
-      SELECT COUNT(*) > 0 AS quiz_submitted_in_week
-      FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
-      WHERE user_id = '%s'
-        AND workflow_state IN ('pending_review', 'complete')
-        AND finished_at_anonymous >= '2024-11-27 08:00:00.000'
-        AND finished_at_anonymous < '2024-11-27 09:00:00.000';
-    ", user_id())
-
-    result <- dbGetQuery(sc, query)
-    week1_quiz_done <- result$quiz_submitted_in_week[1]
-    
     activities <- list(
-      list(name = "Submit Week 1 Quiz", done = week1_quiz_done),
-      list(name = "Reflect on Week 1", done = week1_reflected),
+      list(name = "Submit Week 1 Quiz", done = TRUE),
+      list(name = "Reflect on Week 1", done = TRUE),
       list(name = "Complete Reading", done = FALSE),
       list(name = "Submit Week 2 Quiz", done = FALSE),
-      list(name = "Reflect on Week 2", done = week2_reflected)
->>>>>>> lilian-dev
+      list(name = "Reflect on Week 2", done = FALSE)
     )
-    
+
     total <- length(activities)
     completed <- sum(sapply(activities, function(x) x$done))
     percent <- 20 * sum(sapply(activities, function(x) x$done))
@@ -467,6 +456,10 @@ server <- function(input, output, session) {
       )
   })
   
+  output$satisfaction_feedback <- renderText({
+    satisfaction_feedback()
+  })
+  
   output$satisfaction_ui <- renderUI({
     course <- as.character(input$cId)
     week <- as.character(input$selected_week)
@@ -501,11 +494,10 @@ server <- function(input, output, session) {
     if (!saved) {
       actionButton("save_rating", "Save Reflection", class = "btn btn-primary mt-2")
     } else {
-      actionButton("refresh_rating", "Update Reflection", class = "btn btn-primary mt-2")
+      NULL  # No button if already saved
     }
   })
   
->>>>>>> lilian-dev
   output$streak_badge <- renderUI({
     course <- as.character(input$cId)
     week <- as.numeric(input$selected_week)
@@ -543,33 +535,5 @@ server <- function(input, output, session) {
   })
   
 }
-
-  output$streak_badge <- renderUI({
-    course <- as.character(input$cId)
-    submitted_weeks <- sort(as.numeric(names(satisfaction_ratings$data[[course]])))
-    
-    if (length(submitted_weeks) == 0) {
-      streak <- 0
-    } else if (length(submitted_weeks) == 1) {
-      streak <- 1
-    } else {
-      # Calculate streak: walk from latest back to oldest, stop at gap
-      reversed_weeks <- rev(submitted_weeks)
-      streak <- 1
-      for (i in 2: length(reversed_weeks)) {
-        if (reversed_weeks[i - 1] - reversed_weeks[i] == 1) {
-          streak <- streak + 1
-        } else {
-          break
-        }
-      }
-    }
-    # Display the streak in a styled badge
-    HTML(sprintf("
-      <div class='alert alert-warning mt-3'>
-        🏅 <strong>%d Week Streak!</strong> Reflection badge for %d consecutive submission%s.
-      </div>
-    ", streak, streak, ifelse(streak == 1, "", "s")))
-  })
 
 shinyApp(ui, server)
