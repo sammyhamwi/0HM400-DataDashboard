@@ -1,3 +1,4 @@
+library(jsonlite)
 library(shiny)
 library(dplyr)
 library(DBI)
@@ -25,12 +26,46 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   credentials <- reactiveValues(logged_in = FALSE, user_id = NULL, date = NULL)
+
+  `%||%` <- function(a, b) if (!is.null(a)) a else b
   
-  observeEvent(input$login_button, {
+ observeEvent(input$login_button, {
     req(input$user_id_input, input$date_input)
+    
     credentials$logged_in <- TRUE
     credentials$user_id <- input$user_id_input
     credentials$date <- input$date_input
+    
+    # Clear any old user's data
+    satisfaction_ratings$data <- list()
+    expectation_ratings$data <- list()
+    satisfaction_feedback_store$data <- list()
+    reflection_saved$data <- list()
+  })
+  
+  observe({
+    req(credentials$logged_in)
+    req(credentials$user_id)
+    req(input$cId)  # Now it's safe — UI is rendered
+    
+    user_id_input <- credentials$user_id
+    course <- as.character(input$cId)
+    
+    user_data <- loadUserData(user_id_input)
+    
+    if (is.list(user_data) && !is.null(user_data[[course]])) {
+      weeks_data <- user_data[[course]]
+      
+      for (week in names(weeks_data)) {
+        week_data <- weeks_data[[week]]
+        if (!is.null(week_data)) {
+          satisfaction_ratings$data[[course]][[week]] <- week_data$satisfaction %||% NULL
+          expectation_ratings$data[[course]][[week]] <- week_data$expectation %||% NULL
+          satisfaction_feedback_store$data[[course]][[week]] <- week_data$feedback %||% NULL
+          reflection_saved$data[[course]][[week]] <- TRUE
+        }
+      }
+    } 
   })
   
   observeEvent(input$logout_button, {
@@ -193,9 +228,89 @@ server <- function(input, output, session) {
     }
     satisfaction_feedback_store$data[[course]][[this_week]] <- feedback
     output$satisfaction_feedback <- renderText({ feedback })
+    saveAllUserData(
+      user_id = user_id(),
+      course_id = input$cId,
+      week = input$selected_week,
+      satisfaction = input$satisfaction,
+      expectation = input$expectation,
+      feedback = feedback
+    )
+  })
+  
+  observeEvent(input$refresh_rating, ignoreInit = TRUE, {
+    save_count$count <- save_count$count - 1
+    course <- as.character(input$cId)
+    week <- as.character(input$selected_week)
+    user <- credentials$user_id
+    
+    # Safely remove in isolate block
+    isolate({
+      satisfaction_ratings$data[[course]][[week]] <- NULL
+      expectation_ratings$data[[course]][[week]] <- NULL
+      satisfaction_feedback_store$data[[course]][[week]] <- NULL
+      reflection_saved$data[[course]][[week]] <- NULL
+    })
+    
+    # Safely update JSON
+    file_path <- "all_users_data.json"
+    if (file.exists(file_path)) {
+      data <- jsonlite::read_json(file_path, simplifyVector = FALSE)
+      
+      if (!is.null(data[[user]][[course]][[week]])) {
+        data[[user]][[course]][[week]] <- NULL
+        
+        # Optional cleanup of empty branches
+        if (length(data[[user]][[course]]) == 0) data[[user]][[course]] <- NULL
+        if (length(data[[user]]) == 0) data[[user]] <- NULL
+        
+        jsonlite::write_json(data, file_path, pretty = TRUE, auto_unbox = TRUE)
+      }
+    }
+    
+    output$satisfaction_feedback <- renderText({ "" })
+  })
+  
+  saveAllUserData <- function(user_id, course_id, week, satisfaction, expectation, feedback) {
+    file_path <- "all_users_data.json"
+    data <- list()
+    
+    if (file.exists(file_path)) {
+      data <- jsonlite::read_json(file_path, simplifyVector = FALSE)
+    }
+    
+    user_id <- as.character(user_id)
+    course_id <- as.character(course_id)
+    week <- as.character(week)
+    
+    if (is.null(data[[user_id]])) data[[user_id]] <- list()
+    if (is.null(data[[user_id]][[course_id]])) data[[user_id]][[course_id]] <- list()
+    
+    data[[user_id]][[course_id]][[week]] <- list(
+      satisfaction = satisfaction,
+      expectation = expectation,
+      feedback = feedback,
+      reflection_saved = TRUE
+    )
+    
+    jsonlite::write_json(data, file_path, pretty = TRUE, auto_unbox = TRUE)
+  }
+  
+  loadUserData <- function(user_id) {
+    file_path <- "all_users_data.json"
+    if (file.exists(file_path)) {
+      data <- jsonlite::read_json(file_path, simplifyVector = FALSE)
+      return(data[[user_id]] %||% list())
+    }
+    return(list())
+  }
+  
+>>>>>>> lilian-dev
+=======
     
   })
   
+>>>>>>> main
   observeEvent(input$selected_week, {
     course <- as.character(input$cId)
     week <- as.character(input$selected_week)
@@ -205,7 +320,13 @@ server <- function(input, output, session) {
         !is.null(satisfaction_feedback_store$data[[course]][[week]])) {
       
       feedback <- satisfaction_feedback_store$data[[course]][[week]]
+<<<<<<< HEAD
+      output$satisfaction_feedback <- renderText({
+        satisfaction_feedback_store$data[[course]][[week]] %||% ""
+      })
+=======
       output$satisfaction_feedback <- renderText({ feedback })
+>>>>>>> main
       
     } else {
       # No saved reflection/feedback for this week → clear output
@@ -213,6 +334,24 @@ server <- function(input, output, session) {
     }
   })
   
+<<<<<<< HEAD
+  observeEvent(input$cId, {
+    course <- as.character(input$cId)
+    week <- as.character(input$selected_week)
+    
+    # If feedback exists for new course and selected week, show it
+    if (!is.null(satisfaction_feedback_store$data[[course]]) &&
+        !is.null(satisfaction_feedback_store$data[[course]][[week]])) {
+      
+      output$satisfaction_feedback <- renderText({
+        satisfaction_feedback_store$data[[course]][[week]]
+      })
+    } else {
+      # Otherwise, clear the feedback
+      output$satisfaction_feedback <- renderText({ "" })
+    }
+  })
+
   output$selectedUserId <- renderText({
     course_id_value <- course_id()
     user_id_value <- user_id()
@@ -241,11 +380,11 @@ server <- function(input, output, session) {
       list(name = "Submit Week 2 Quiz", done = FALSE),
       list(name = "Reflect on Week 2", done = FALSE)
     )
-    
+
     total <- length(activities)
     completed <- sum(sapply(activities, function(x) x$done))
-    percent <- round((completed / total) * 100)
-    
+    percent <- 20 * sum(sapply(activities, function(x) x$done))
+
     list_items <- paste0(
       "<ul class='list-group mb-3'>",
       paste(sapply(activities, function(x) {
@@ -358,8 +497,6 @@ server <- function(input, output, session) {
       NULL  # No button if already saved
     }
   })
-  
-  
   
   output$streak_badge <- renderUI({
     course <- as.character(input$cId)
