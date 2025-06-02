@@ -29,7 +29,7 @@ server <- function(input, output, session) {
   
   `%||%` <- function(a, b) if (!is.null(a)) a else b
   
-  observeEvent(input$login_button, {
+ observeEvent(input$login_button, {
     req(input$user_id_input, input$date_input)
     
     credentials$logged_in <- TRUE
@@ -305,6 +305,7 @@ server <- function(input, output, session) {
     return(list())
   }
   
+>>>>>>> lilian-dev
   observeEvent(input$selected_week, {
     course <- as.character(input$cId)
     week <- as.character(input$selected_week)
@@ -317,7 +318,6 @@ server <- function(input, output, session) {
       output$satisfaction_feedback <- renderText({
         satisfaction_feedback_store$data[[course]][[week]] %||% ""
       })
-      
       
     } else {
       # No saved reflection/feedback for this week → clear output
@@ -343,6 +343,7 @@ server <- function(input, output, session) {
   })
   
   
+>>>>>>> lilian-dev
   output$selectedUserId <- renderText({
     course_id_value <- course_id()
     user_id_value <- user_id()
@@ -388,12 +389,13 @@ server <- function(input, output, session) {
       list(name = "Complete Reading", done = FALSE),
       list(name = "Submit Week 2 Quiz", done = FALSE),
       list(name = "Reflect on Week 2", done = week2_reflected)
+>>>>>>> lilian-dev
     )
     
     total <- length(activities)
     completed <- sum(sapply(activities, function(x) x$done))
     percent <- 20 * sum(sapply(activities, function(x) x$done))
-    
+
     list_items <- paste0(
       "<ul class='list-group mb-3'>",
       paste(sapply(activities, function(x) {
@@ -503,6 +505,7 @@ server <- function(input, output, session) {
     }
   })
   
+>>>>>>> lilian-dev
   output$streak_badge <- renderUI({
     course <- as.character(input$cId)
     week <- as.numeric(input$selected_week)
