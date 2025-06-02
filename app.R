@@ -603,78 +603,165 @@ server <- function(input, output, session) {
   
   # Activity Tracker
   output$activityTracker <- renderUI({
-    req(user_id())
-    course_id_val <- course_id()
+    req(user_id()) # Ensures user_id is available
+    current_course_id_char <- as.character(course_id()) # Get current course_id as character for reactiveValues access
     
-    week1_reflected <- isTRUE(reflection_saved$data[[course_id_val]][["1"]])
-    week2_reflected <- isTRUE(reflection_saved$data[[course_id_val]][["2"]])
+    # Existing reflection checks
+    week1_reflected <- isTRUE(reflection_saved$data[[current_course_id_char]][["1"]])
+    week2_reflected <- isTRUE(reflection_saved$data[[current_course_id_char]][["2"]])
     
-    query <- sprintf("
-      SELECT COUNT(*) > 0 AS quiz_submitted_in_week
-      FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
-      WHERE user_id = '%s'
-        AND workflow_state IN ('pending_review', 'complete')
-        AND finished_at_anonymous >= '2024-11-27 08:00:00.000'
-        AND finished_at_anonymous < '2024-11-27 09:00:00.000';
-    ", user_id())
+    # --- Query for Week 1 Quiz (Existing) ---
     
-    result <- dbGetQuery(sc, query)
-    week1_quiz_done <- result$quiz_submitted_in_week[1]
+    # IMPORTANT: These are example timestamps from your original code.
+    start_time_w1_quiz <- '2024-11-27 08:00:00.000'
+    end_time_w1_quiz <- '2024-11-27 09:00:00.000'
     
+    query_w1_quiz <- sprintf("
+    SELECT COUNT(*) > 0 AS quiz_submitted_in_week
+    FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
+    WHERE user_id = '%s'
+      AND workflow_state IN ('pending_review', 'complete')
+      AND finished_at_anonymous >= '%s'
+      AND finished_at_anonymous < '%s';
+  ", user_id(), start_time_w1_quiz, end_time_w1_quiz)
+    
+    result_w1_quiz <- tryCatch({
+      dbGetQuery(sc, query_w1_quiz)
+    }, error = function(e) {
+      cat("Error querying quiz submissions for Week 1:", e$message, "\n")
+      data.frame(quiz_submitted_in_week = FALSE)
+    })
+    week1_quiz_done <- if (nrow(result_w1_quiz) > 0) result_w1_quiz$quiz_submitted_in_week[1] else FALSE
+    
+    # --- START: New Code for Week 1 Assignment ---
+    # !!! IMPORTANT !!!
+    # Define the actual start and end timestamps for the Week 1 assignment submission period.
+    # These timestamps might vary depending on the course or be fixed.
+    # Replace the placeholder strings below with actual timestamp strings.
+    # Example: 'YYYY-MM-DD HH:MM:SS.sss'
+    start_time_w1_assignment <- '2025-02-01 00:00:00.000' # <<< REPLACE: Start of Week 1 Assignment Period
+    end_time_w1_assignment   <- '2025-02-08 00:00:00.000' # <<< REPLACE: End of Week 1 Assignment Period
+    
+    query_w1_assignment <- sprintf("
+    SELECT COUNT(*) > 0 AS assignment_submitted_this_week
+    FROM sandbox_la_conijn_cbl.silver_canvas_submissions
+    WHERE user_id = '%s'
+      AND workflow_state IN ('pending_review', 'graded', 'submitted')
+      AND submitted_at_anonymous >= '%s'   -- Using confirmed column 'submitted_at_anonymous'
+      AND submitted_at_anonymous < '%s';
+  ", user_id(), start_time_w1_assignment, end_time_w1_assignment)
+    
+    # Execute the query, with error handling
+    result_w1_assignment <- tryCatch({
+      dbGetQuery(sc, query_w1_assignment) # 'sc' is your database connection
+    }, error = function(e) {
+      cat("Error querying assignment submissions for Week 1:", e$message, "\n")
+      # Fallback: return a data frame indicating submission was not made
+      data.frame(assignment_submitted_this_week = FALSE)
+    })
+    week1_assignment_done <- if (nrow(result_w1_assignment) > 0) result_w1_assignment$assignment_submitted_this_week[1] else FALSE
+    # --- END: New code for Week 1 Assignment ---
+    
+    # Define the list of activities including the new assignment task
     activities <- list(
       list(name = "Submit Week 1 Quiz", done = week1_quiz_done),
+      list(name = "Submit Week 1 Assignment", done = week1_assignment_done), # <<< ADDED HERE
       list(name = "Reflect on Week 1", done = week1_reflected),
-      list(name = "Complete Reading", done = FALSE),
-      list(name = "Submit Week 2 Quiz", done = FALSE),
+      list(name = "Complete Reading", done = FALSE), # Placeholder or future feature
+      list(name = "Submit Week 2 Quiz", done = FALSE), # Currently hardcoded as FALSE
       list(name = "Reflect on Week 2", done = week2_reflected)
     )
     
+    total <- length(activities)
     completed <- sum(sapply(activities, function(x) x$done))
-    percent <- 20 * completed
     
+    # Updated percentage calculation for progress bar
+    percent <- if (total > 0) round((completed / total) * 100) else 0
+    
+    # HTML for the list items
     list_items <- paste0(
       "<ul class='list-group mb-3'>",
       paste(sapply(activities, function(x) {
         if (x$done) {
           sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-success'>
-                    ✅ %s
-                  </li>", x$name)
+                  ✅ %s
+                </li>", x$name)
         } else {
           sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-muted'>
-                    ⬜ %s
-                  </li>", x$name)
+                  ⬜ %s
+                </li>", x$name)
         }
       }), collapse = ""),
       "</ul>"
     )
     
+    # HTML for the progress bar
     progress_bar <- sprintf("
-      <div class='progress'>
-        <div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>
-          %d%%
-        </div>
-      </div>", percent, percent, percent)
+  <div class='progress'>
+    <div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>
+      %d%%
+    </div>
+  </div>", percent, percent, percent)
     
     HTML(paste0(list_items, progress_bar))
   })
   
-  # Sample data for plots
-  df_files <- data.frame(
-    date = seq.Date(Sys.Date() - 6, Sys.Date(), by = "day"),
-    count = c(2, 3, 4, 3, 5, 4, 6)
-  )
-  df_quizzes <- data.frame(
-    date = seq.Date(Sys.Date() - 6, Sys.Date(), by = "day"),
-    time_spent = c(15, 20, 10, 25, 30, 20, 18)
-  )
-  df_discussions <- data.frame(
-    date = seq.Date(Sys.Date() - 6, Sys.Date(), by = "day"),
-    time_spent = c(5, 10, 8, 12, 9, 7, 6)
-  )
+  # -------------------------------------------------------------------
+  # REAL DATA FOR PLOTS (last 7 days up to selected login date, per user_id)
+  # -------------------------------------------------------------------
   
-  # Files Plot
+  ## FILES PLOT: count of “files” actions in web_logs
   output$filesPlot <- renderPlotly({
-    plot_ly(df_files, x = ~date, y = ~count, type = 'scatter', mode = 'lines+markers', name = 'Files') %>%
+    req(credentials$logged_in, credentials$user_id, credentials$date)
+    
+    # Build an 8-day window: [selected_date - 7, selected_date]
+    end_date   <- as.Date(credentials$date)
+    start_date <- end_date - 7
+    
+    # Use timestamp range instead of CAST(… AS DATE)
+    # We include all of end_date by using < (end_date + 1)
+    start_ts <- paste0(start_date, " 00:00:00")
+    end_ts   <- paste0(end_date + 1, " 00:00:00")
+    
+    query_files <- sprintf("
+      SELECT
+        CAST(timestamp AS DATE) AS activity_date,
+        COUNT(*)                AS file_count
+      FROM sandbox_la_conijn_cbl.silver_canvas_web_logs
+      WHERE user_id = '%s'
+        AND web_application_controller = 'files'
+        AND timestamp BETWEEN '%s' AND '%s'
+        AND course_id = %s
+      GROUP BY CAST(timestamp AS DATE)
+      ORDER BY activity_date;
+    ",
+                           credentials$user_id,
+                           start_ts,
+                           end_ts,
+                           course_id()
+    )
+    
+    df_files <- tryCatch({
+      dbGetQuery(sc, query_files)
+    }, error = function(e) {
+      data.frame(
+        activity_date = seq.Date(start_date, end_date, by = "day"),
+        file_count    = rep(0L, 8)
+      )
+    })
+    
+    all_days <- data.frame(activity_date = seq.Date(start_date, end_date, by = "day"))
+    df_files <- merge(all_days, df_files, by = "activity_date", all.x = TRUE)
+    df_files$file_count[is.na(df_files$file_count)] <- 0
+    
+    plot_ly(
+      df_files,
+      x = ~activity_date,
+      y = ~file_count,
+      type = 'scatter',
+      mode = 'lines+markers',
+      name = 'Files'
+    ) %>%
       layout(
         title = "Files Accessed per Day",
         xaxis = list(title = "Date"),
@@ -683,9 +770,54 @@ server <- function(input, output, session) {
       )
   })
   
-  # Quizzes Plot
+  ## QUIZZES PLOT: sum of DurationInMinutes per day from quiz_submissions
   output$quizzesPlot <- renderPlotly({
-    plot_ly(df_quizzes, x = ~date, y = ~time_spent, type = 'scatter', mode = 'lines+markers', name = 'Quizzes') %>%
+    req(credentials$logged_in, credentials$user_id, credentials$date)
+    
+    end_date   <- as.Date(credentials$date)
+    start_date <- end_date - 7
+    
+    start_ts <- paste0(start_date, " 00:00:00")
+    end_ts   <- paste0(end_date + 1, " 00:00:00")
+    
+    query_quizzes <- sprintf("
+      SELECT
+        CAST(finished_at_anonymous AS DATE) AS attempt_date,
+        COALESCE(SUM(DurationInMinutes), 0)  AS total_time_spent
+      FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
+      WHERE user_id = '%s'
+        AND finished_at_anonymous BETWEEN '%s' AND '%s'
+        AND course_id = %s
+      GROUP BY CAST(finished_at_anonymous AS DATE)
+      ORDER BY attempt_date;
+    ",
+                             credentials$user_id,
+                             start_ts,
+                             end_ts,
+                             course_id()
+    )
+    
+    df_quizzes <- tryCatch({
+      dbGetQuery(sc, query_quizzes)
+    }, error = function(e) {
+      data.frame(
+        attempt_date     = seq.Date(start_date, end_date, by = "day"),
+        total_time_spent = rep(0L, 8)
+      )
+    })
+    
+    all_days <- data.frame(attempt_date = seq.Date(start_date, end_date, by = "day"))
+    df_quizzes <- merge(all_days, df_quizzes, by = "attempt_date", all.x = TRUE)
+    df_quizzes$total_time_spent[is.na(df_quizzes$total_time_spent)] <- 0
+    
+    plot_ly(
+      df_quizzes,
+      x = ~attempt_date,
+      y = ~total_time_spent,
+      type = 'scatter',
+      mode = 'lines+markers',
+      name = 'Quizzes'
+    ) %>%
       layout(
         title = "Time Spent on Quizzes",
         xaxis = list(title = "Date"),
@@ -694,13 +826,59 @@ server <- function(input, output, session) {
       )
   })
   
-  # Discussions Plot
+  ## DISCUSSIONS PLOT: count of discussion entries per day
   output$discussionsPlot <- renderPlotly({
-    plot_ly(df_discussions, x = ~date, y = ~time_spent, type = 'scatter', mode = 'lines+markers', name = 'Discussions') %>%
+    course <- selectedCourse()
+    req(credentials$logged_in, credentials$user_id, credentials$date)
+    
+    end_date   <- as.Date(credentials$date)
+    start_date <- end_date - 7
+    
+    start_ts <- paste0(start_date, " 00:00:00")
+    end_ts   <- paste0(end_date + 1, " 00:00:00")
+    
+    query_discussions <- sprintf("
+      SELECT
+        CAST(created_at_anonymous AS DATE) AS post_date,
+        COUNT(*)                        AS posts_count
+      FROM sandbox_la_conijn_cbl.silver_canvas_discussion_entries
+      WHERE user_id = '%s'
+        AND created_at_anonymous BETWEEN '%s' AND '%s'
+        AND course_id = %s
+      GROUP BY CAST(created_at_anonymous AS DATE)
+      ORDER BY post_date;
+    ",
+                                 credentials$user_id,
+                                 start_ts,
+                                 end_ts,
+                                 course_id()
+    )
+    
+    df_discussions <- tryCatch({
+      dbGetQuery(sc, query_discussions)
+    }, error = function(e) {
+      data.frame(
+        post_date   = seq.Date(start_date, end_date, by = "day"),
+        posts_count = rep(0L, 8)
+      )
+    })
+    
+    all_days <- data.frame(post_date = seq.Date(start_date, end_date, by = "day"))
+    df_discussions <- merge(all_days, df_discussions, by = "post_date", all.x = TRUE)
+    df_discussions$posts_count[is.na(df_discussions$posts_count)] <- 0
+    
+    plot_ly(
+      df_discussions,
+      x = ~post_date,
+      y = ~posts_count,
+      type = 'scatter',
+      mode = 'lines+markers',
+      name = 'Discussions'
+    ) %>%
       layout(
-        title = "Time Spent on Discussions",
+        title = "Discussion Posts per Day",
         xaxis = list(title = "Date"),
-        yaxis = list(title = "Time Spent (min)"),
+        yaxis = list(title = "Posts Count"),
         hovermode = "x unified"
       )
   })
