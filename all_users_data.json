@@ -12,6 +12,12 @@
         "expectation": 1,
         "feedback": "You didn’t quite meet your expectations. Think about what barriers might have affected your progress. You’re expecting similar satisfaction next week. Do you feel you’ve found a stable rhythm?",
         "reflection_saved": true
+      },
+      "4": {
+        "satisfaction": 3,
+        "expectation": 7,
+        "feedback": " You’re aiming higher for next week. What’s your plan to get there?",
+        "reflection_saved": true
       }
     }
   },

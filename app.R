@@ -10,9 +10,15 @@ ui <- fluidPage(
   tags$head(
     tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"),
     tags$style(HTML("
-    body { background-color: #f8f9fa; font-family: system-ui; }Add commentMore actions
+    body { background-color: #f8f9fa; font-family: system-ui; }
     .card { border-radius: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,0.05); margin-bottom: 1rem; }
     .section-title { font-weight: 600; font-size: 1.2rem; margin-bottom: 0.75rem; }
+    .sidebar { background-color: #ffffff; height: 100vh; padding: 1.5rem; border-right: 1px solid #ddd; }
+    .sidebar h5 { margin-bottom: 1rem; }
+    .main-content { padding: 2rem; }
+    .header-banner { background-color: #007bff; color: white; padding: 1rem 2rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+    .header-banner h3 { margin: 0; }
+    .login-card { max-width: 400px; margin: 100px auto; padding: 2rem; }
     .irs-grid-text, .irs-min, .irs-max { display: none !important; }
     .irs--shiny .irs-grid { display: none !important; }
     
@@ -587,7 +593,7 @@ server <- function(input, output, session) {
     }
   })
   
-  output$badges <- renderUI({Add commentMore actions
+  output$badges <- renderUI({
     # Retrieve the save_count (assuming it’s reactive and available)
     count <- save_count$count
     
@@ -639,7 +645,7 @@ server <- function(input, output, session) {
     
     badge_html <- paste0(badge_html, "</div>")
     
-    HTML(badge_html)Add commentMore actions
+    HTML(badge_html)
   })
 }
 
