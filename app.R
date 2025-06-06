@@ -604,15 +604,13 @@ server <- function(input, output, session) {
   # Activity Tracker
   output$activityTracker <- renderUI({
     req(user_id()) # Ensures user_id is available
-    current_course_id_char <- as.character(course_id()) # Get current course_id as character for reactiveValues access
+    current_course_id_char <- as.character(course_id())
     
     # Existing reflection checks
     week1_reflected <- isTRUE(reflection_saved$data[[current_course_id_char]][["1"]])
     week2_reflected <- isTRUE(reflection_saved$data[[current_course_id_char]][["2"]])
     
     # --- Query for Week 1 Quiz (Existing) ---
-    
-    # IMPORTANT: These are example timestamps from your original code.
     start_time_w1_quiz <- '2024-11-27 08:00:00.000'
     end_time_w1_quiz <- '2024-11-27 09:00:00.000'
     
@@ -634,29 +632,22 @@ server <- function(input, output, session) {
     week1_quiz_done <- if (nrow(result_w1_quiz) > 0) result_w1_quiz$quiz_submitted_in_week[1] else FALSE
     
     # --- START: New Code for Week 1 Assignment ---
-    # !!! IMPORTANT !!!
-    # Define the actual start and end timestamps for the Week 1 assignment submission period.
-    # These timestamps might vary depending on the course or be fixed.
-    # Replace the placeholder strings below with actual timestamp strings.
-    # Example: 'YYYY-MM-DD HH:MM:SS.sss'
-    start_time_w1_assignment <- '2025-02-01 00:00:00.000' # <<< REPLACE: Start of Week 1 Assignment Period
-    end_time_w1_assignment   <- '2025-02-08 00:00:00.000' # <<< REPLACE: End of Week 1 Assignment Period
+    start_time_w1_assignment <- '2025-02-01 00:00:00.000'
+    end_time_w1_assignment   <- '2025-02-08 00:00:00.000'
     
     query_w1_assignment <- sprintf("
     SELECT COUNT(*) > 0 AS assignment_submitted_this_week
     FROM sandbox_la_conijn_cbl.silver_canvas_submissions
     WHERE user_id = '%s'
       AND workflow_state IN ('pending_review', 'graded', 'submitted')
-      AND submitted_at_anonymous >= '%s'   -- Using confirmed column 'submitted_at_anonymous'
+      AND submitted_at_anonymous >= '%s'
       AND submitted_at_anonymous < '%s';
   ", user_id(), start_time_w1_assignment, end_time_w1_assignment)
     
-    # Execute the query, with error handling
     result_w1_assignment <- tryCatch({
-      dbGetQuery(sc, query_w1_assignment) # 'sc' is your database connection
+      dbGetQuery(sc, query_w1_assignment)
     }, error = function(e) {
       cat("Error querying assignment submissions for Week 1:", e$message, "\n")
-      # Fallback: return a data frame indicating submission was not made
       data.frame(assignment_submitted_this_week = FALSE)
     })
     week1_assignment_done <- if (nrow(result_w1_assignment) > 0) result_w1_assignment$assignment_submitted_this_week[1] else FALSE
@@ -665,20 +656,47 @@ server <- function(input, output, session) {
     # Define the list of activities including the new assignment task
     activities <- list(
       list(name = "Submit Week 1 Quiz", done = week1_quiz_done),
-      list(name = "Submit Week 1 Assignment", done = week1_assignment_done), # <<< ADDED HERE
+      list(name = "Submit Week 1 Assignment", done = week1_assignment_done),
       list(name = "Reflect on Week 1", done = week1_reflected),
-      list(name = "Complete Reading", done = FALSE), # Placeholder or future feature
-      list(name = "Submit Week 2 Quiz", done = FALSE), # Currently hardcoded as FALSE
+      list(name = "Complete Reading", done = FALSE),
+      list(name = "Submit Week 2 Quiz", done = FALSE),
       list(name = "Reflect on Week 2", done = week2_reflected)
     )
     
     total <- length(activities)
     completed <- sum(sapply(activities, function(x) x$done))
-    
-    # Updated percentage calculation for progress bar
     percent <- if (total > 0) round((completed / total) * 100) else 0
     
-    # HTML for the list items
+    # =============================================================
+    # START: New Feedback Generation Logic
+    # =============================================================
+    
+    # Initialize an empty feedback message
+    activity_feedback_text <- ""
+    
+    # Generate feedback based on the number of completed tasks
+    if (completed == total && total > 0) {
+      # Case 1: All tasks are completed
+      activity_feedback_text <- "Great job! You've completed all activities. 🎉"
+    } else if (completed > 0) {
+      # Case 2: At least one task is completed
+      activity_feedback_text <- "Excellent! You've checked another activity off the list. Keep the momentum going! 💪"
+    } else {
+      # Case 3: No tasks are completed yet
+      activity_feedback_text <- "It looks like you're just getting started! For a good overview, perhaps look at the activity breakdown to see where you can best invest your time. 🗺"
+    }
+    
+    # Create the HTML for the feedback message. Using Bootstrap's 'alert' class for nice styling.
+    feedback_html <- sprintf(
+      "<div class='alert alert-info mt-3' role='alert'>%s</div>", 
+      activity_feedback_text
+    )
+    
+    # =============================================================
+    # END: New Feedback Generation Logic
+    # =============================================================
+    
+    # HTML for the list items (Unchanged)
     list_items <- paste0(
       "<ul class='list-group mb-3'>",
       paste(sapply(activities, function(x) {
@@ -695,7 +713,7 @@ server <- function(input, output, session) {
       "</ul>"
     )
     
-    # HTML for the progress bar
+    # HTML for the progress bar (Unchanged)
     progress_bar <- sprintf("
   <div class='progress'>
     <div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>
@@ -703,7 +721,8 @@ server <- function(input, output, session) {
     </div>
   </div>", percent, percent, percent)
     
-    HTML(paste0(list_items, progress_bar))
+    # Combine all HTML elements, with the new feedback message at the end
+    HTML(paste0(list_items, progress_bar, feedback_html))
   })
   
   # -------------------------------------------------------------------
