@@ -243,6 +243,9 @@ server <- function(input, output, session) {
   # Track selected course manually (initial: 28301)
   selectedCourse <- reactiveVal("28301")
   
+  #course starting date
+  COURSE_START_DATE <- as.Date("2024-11-11")
+  
   # Handle login
   observeEvent(input$login_button, {
     req(input$user_id_input, input$date_input)
@@ -434,6 +437,16 @@ server <- function(input, output, session) {
   reflection_saved <- reactiveValues(data = list())
   save_count <- reactiveValues(count = 0)
   current_week <- reactive({ as.numeric(input$selected_week) })
+  weekNumber <- reactive({
+    req(credentials$date) # Make sure login date is available
+    login_date <- as.Date(credentials$date)
+    
+    # Calculate week number
+    num <- as.integer(floor(as.numeric(difftime(login_date, COURSE_START_DATE, units = "days")) / 7)) + 1
+    
+    # Ensure the week is within the 1-10 range of the course
+    min(max(1, num), 10)
+  })
   
   #########################
   # Save / Update Reflection logic
@@ -601,130 +614,144 @@ server <- function(input, output, session) {
     paste("Welcome", user_id_value, "| Date:", date_value, "| Total Active Time:", seconds, "seconds")
   })
   
-  # Activity Tracker
   output$activityTracker <- renderUI({
-    req(user_id()) # Ensures user_id is available
-    current_course_id_char <- as.character(course_id())
+    # Require user_id and that the login date has been set
+    req(user_id(), credentials$date)
     
-    # Existing reflection checks
-    week1_reflected <- isTRUE(reflection_saved$data[[current_course_id_char]][["1"]])
-    week2_reflected <- isTRUE(reflection_saved$data[[current_course_id_char]][["2"]])
+    course <- as.character(course_id())
+    user <- user_id()
     
-    # --- Query for Week 1 Quiz (Existing) ---
-    start_time_w1_quiz <- '2024-11-27 08:00:00.000'
-    end_time_w1_quiz <- '2024-11-27 09:00:00.000'
+    # Get the current week number from your reactive
+    week <- weekNumber() 
     
-    query_w1_quiz <- sprintf("
-    SELECT COUNT(*) > 0 AS quiz_submitted_in_week
-    FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
-    WHERE user_id = '%s'
-      AND workflow_state IN ('pending_review', 'complete')
-      AND finished_at_anonymous >= '%s'
-      AND finished_at_anonymous < '%s';
-  ", user_id(), start_time_w1_quiz, end_time_w1_quiz)
+    # # Determine the 2-week block to display
+    # if (week == 1) {
+    #   # For the very first week, only show Week 1 activities
+    #   all_activities <- make_week_activities(1)
+    #   
+    #   # Define block_start for the completion tracking logic that follows
+    #   block_start <- 1 
+    #   
+    # } else {
+    #   # For all other weeks, show the current week and the previous week
+    #   block_start <- week - 1
+    #   block_end <- week
+    #   
+    #   # Create the list of activities for both weeks
+    #   all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
+    # }
     
-    result_w1_quiz <- tryCatch({
-      dbGetQuery(sc, query_w1_quiz)
-    }, error = function(e) {
-      cat("Error querying quiz submissions for Week 1:", e$message, "\n")
-      data.frame(quiz_submitted_in_week = FALSE)
-    })
-    week1_quiz_done <- if (nrow(result_w1_quiz) > 0) result_w1_quiz$quiz_submitted_in_week[1] else FALSE
-    
-    # --- START: New Code for Week 1 Assignment ---
-    start_time_w1_assignment <- '2025-02-01 00:00:00.000'
-    end_time_w1_assignment   <- '2025-02-08 00:00:00.000'
-    
-    query_w1_assignment <- sprintf("
-    SELECT COUNT(*) > 0 AS assignment_submitted_this_week
-    FROM sandbox_la_conijn_cbl.silver_canvas_submissions
-    WHERE user_id = '%s'
-      AND workflow_state IN ('pending_review', 'graded', 'submitted')
-      AND submitted_at_anonymous >= '%s'
-      AND submitted_at_anonymous < '%s';
-  ", user_id(), start_time_w1_assignment, end_time_w1_assignment)
-    
-    result_w1_assignment <- tryCatch({
-      dbGetQuery(sc, query_w1_assignment)
-    }, error = function(e) {
-      cat("Error querying assignment submissions for Week 1:", e$message, "\n")
-      data.frame(assignment_submitted_this_week = FALSE)
-    })
-    week1_assignment_done <- if (nrow(result_w1_assignment) > 0) result_w1_assignment$assignment_submitted_this_week[1] else FALSE
-    # --- END: New code for Week 1 Assignment ---
-    
-    # Define the list of activities including the new assignment task
-    activities <- list(
-      list(name = "Submit Week 1 Quiz", done = week1_quiz_done),
-      list(name = "Submit Week 1 Assignment", done = week1_assignment_done),
-      list(name = "Reflect on Week 1", done = week1_reflected),
-      list(name = "Complete Reading", done = FALSE),
-      list(name = "Submit Week 2 Quiz", done = FALSE),
-      list(name = "Reflect on Week 2", done = week2_reflected)
-    )
-    
-    total <- length(activities)
-    completed <- sum(sapply(activities, function(x) x$done))
-    percent <- if (total > 0) round((completed / total) * 100) else 0
-    
-    # =============================================================
-    # START: New Feedback Generation Logic
-    # =============================================================
-    
-    # Initialize an empty feedback message
-    activity_feedback_text <- ""
-    
-    # Generate feedback based on the number of completed tasks
-    if (completed == total && total > 0) {
-      # Case 1: All tasks are completed
-      activity_feedback_text <- "Great job! You've completed all activities. 🎉"
-    } else if (completed > 0) {
-      # Case 2: At least one task is completed
-      activity_feedback_text <- "Excellent! You've checked another activity off the list. Keep the momentum going! 💪"
-    } else {
-      # Case 3: No tasks are completed yet
-      activity_feedback_text <- "It looks like you're just getting started! For a good overview, perhaps look at the activity breakdown to see where you can best invest your time. 🗺"
+    #---------------------------------------------------------------------
+    # 1. NEW HELPER FUNCTION - Get Timestamps for a Given Week
+    #    (This replaces the data.frame lookup from the previous answer)
+    #---------------------------------------------------------------------
+    get_week_timestamps <- function(week_num, course_start_date) {
+      # Week 1 starts on day 0, Week 2 on day 7, etc.
+      start_of_week <- course_start_date + (7 * (week_num - 1))
+      end_of_week   <- start_of_week + 7
+      
+      # Format for the SQL query
+      list(
+        start_time = paste0(start_of_week, " 00:00:00.000"),
+        end_time = paste0(end_of_week, " 00:00:00.000")
+      )
     }
     
-    # Create the HTML for the feedback message. Using Bootstrap's 'alert' class for nice styling.
-    feedback_html <- sprintf(
-      "<div class='alert alert-info mt-3' role='alert'>%s</div>", 
-      activity_feedback_text
-    )
+    #---------------------------------------------------------------------
+    # 2. HELPER FUNCTIONS - Reusable Database Queries (Unchanged)
+    #---------------------------------------------------------------------
+    is_quiz_submitted <- function(user_id, start_time, end_time, db_con) {
+      query <- sprintf("
+      SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
+      WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'complete') AND 
+      finished_at_anonymous >= '%s' AND finished_at_anonymous < '%s';",
+                       user_id, start_time, end_time
+      )
+      result <- tryCatch({ dbGetQuery(db_con, query) },
+                         error = function(e) { cat("Error querying quiz subs:", e$message, "\n"); data.frame(submitted = FALSE) }
+      )
+      return(if (nrow(result) > 0) result$submitted[1] else FALSE)
+    }
     
-    # =============================================================
-    # END: New Feedback Generation Logic
-    # =============================================================
+    is_assignment_submitted <- function(user_id, start_time, end_time, db_con) {
+      query <- sprintf("
+      SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_submissions
+      WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'graded', 'submitted') AND 
+      submitted_at_anonymous >= '%s' AND submitted_at_anonymous < '%s';",
+                       user_id, start_time, end_time
+      )
+      result <- tryCatch({ dbGetQuery(db_con, query) },
+                         error = function(e) { cat("Error querying assignment subs:", e$message, "\n"); data.frame(submitted = FALSE) }
+      )
+      return(if (nrow(result) > 0) result$submitted[1] else FALSE)
+    }
     
-    # HTML for the list items (Unchanged)
+    #---------------------------------------------------------------------
+    # 3. DYNAMIC ACTIVITY GENERATION (Now using the new timestamp function)
+    #---------------------------------------------------------------------
+    reflected <- function(week_num) {
+      isTRUE(reflection_saved$data[[course]][[as.character(week_num)]])
+    }
+    
+    make_week_activities <- function(week_num) {
+      # Generate timestamps dynamically using the course start date
+      timestamps <- get_week_timestamps(week_num, COURSE_START_DATE)
+      
+      # Use the helper functions to query the database
+      quiz_done <- is_quiz_submitted(user, timestamps$start_time, timestamps$end_time, sc)
+      assignment_done <- is_assignment_submitted(user, timestamps$start_time, timestamps$end_time, sc)
+      
+      list(
+        list(name = sprintf("Submit Week %d Quiz", week_num), done = quiz_done),
+        list(name = sprintf("Submit Week %d Assignment", week_num), done = assignment_done),
+        list(name = sprintf("Reflect on Week %d", week_num), done = reflected(week_num))
+      )
+    }
+    
+    if (week == 1) {
+      # For the very first week, only show Week 1 activities
+      all_activities <- make_week_activities(1)
+      # The block is just week 1
+      block_start <- 1 
+    } else {
+      # For all other weeks, show the current week and the previous week
+      block_start <- week - 1
+      block_end <- week
+      all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
+    }    
+    #---------------------------------------------------------------------
+    # 4. PROGRESS & UI (Unchanged)
+    #---------------------------------------------------------------------
+    total <- length(all_activities)
+    completed <- sum(sapply(all_activities, function(x) x$done))
+    percent <- if (total > 0) round((completed / total) * 100) else 0
+    
+    # Feedback generation logic
+    activity_feedback_text <- ""
+    if (completed == total && total > 0) {
+      activity_feedback_text <- "Great job! You've completed all activities for this block. 🎉"
+    } else if (completed > 0) {
+      activity_feedback_text <- "Excellent! You've checked another activity off the list. Keep the momentum going! 💪"
+    } else {
+      activity_feedback_text <- "It looks like you're just getting started! For a good overview, perhaps look at the activity breakdown to see where you can best invest your time. 🗺️"
+    }
+    feedback_html <- sprintf("<div class='alert alert-info mt-3' role='alert'>%s</div>", activity_feedback_text)
+    
+    # Generate HTML for activity list and progress bar
     list_items <- paste0(
       "<ul class='list-group mb-3'>",
-      paste(sapply(activities, function(x) {
+      paste(sapply(all_activities, function(x) {
         if (x$done) {
-          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-success'>
-                  ✅ %s
-                </li>", x$name)
+          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-success'>✅ %s</li>", x$name)
         } else {
-          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-muted'>
-                  ⬜ %s
-                </li>", x$name)
+          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-muted'>⬜ %s</li>", x$name)
         }
-      }), collapse = ""),
-      "</ul>"
+      }), collapse = ""), "</ul>"
     )
+    progress_bar <- sprintf("<div class='progress'><div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>%d%%</div></div>", percent, percent, percent)
     
-    # HTML for the progress bar (Unchanged)
-    progress_bar <- sprintf("
-  <div class='progress'>
-    <div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>
-      %d%%
-    </div>
-  </div>", percent, percent, percent)
-    
-    # Combine all HTML elements, with the new feedback message at the end
     HTML(paste0(list_items, progress_bar, feedback_html))
   })
-  
   # -------------------------------------------------------------------
   # REAL DATA FOR PLOTS (last 7 days up to selected login date, per user_id)
   # -------------------------------------------------------------------
