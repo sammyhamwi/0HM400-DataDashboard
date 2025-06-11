@@ -1030,7 +1030,6 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$refresh_rating, ignoreInit = TRUE, {
-    save_count$count <- save_count$count - 1
     course <- selectedCourse()
     week <- as.character(weekNumber())
     user <- credentials$user_id
