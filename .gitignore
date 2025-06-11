@@ -57,7 +57,8 @@ Shiny_dashboard.Rproj
 # Ignore all connect.R files recursively
 **/connect.R
 
-# Ignore all all_users_data.json files recursively
+# Ignore all .json files recursively
 **/all_users_data.json
+**/activity_completion_data.json
 
 

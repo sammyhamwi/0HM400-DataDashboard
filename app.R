@@ -2,6 +2,7 @@
 
 library(jsonlite)
 library(shiny)
+library(shinyjs)
 library(dplyr)
 library(DBI)
 library(ggplot2)
@@ -9,20 +10,36 @@ library(plotly)
 library(tidyr)
 
 ui <- fluidPage(
+  useShinyjs(),
   tags$head(
     # Bootstrap CSS
     tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"),
-    # Custom CSS with new dashboard palette:
-    #   - #F0F2F5 (light gray background)
-    #   - #2C3E50 (dark slate for sidebar)
-    #   - #2980B9 (blue accent)
-    #   - #E67E22 (orange highlight)
-    #   - #2ECC71 (green for progress)
     tags$style(HTML("
       /* Page background and font */
       body {
         background-color: #F0F2F5;
         font-family: system-ui;
+      }
+      
+      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
+      /* Smooth theme‐color transitions on background, text & borders */
+      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
+      body,
+      html,
+      .header-banner,
+      .sidebar,
+      .card,
+      .section-title,
+      .list-group-item,
+      .btn,
+      .btn-outline-primary,
+      input,
+      select,
+      .input-group-text {
+        transition: 
+          background-color 0.4s ease,
+          color            0.4s ease,
+          border-color     0.4s ease;
       }
 
       /* Header banner: gradient from dark slate to blue */
@@ -34,7 +51,7 @@ ui <- fluidPage(
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-radius: 0;  /* remove bottom-left rounding so sidebar meets flush */
+        border-radius: 0;
       }
       .header-banner h3 {
         margin: 0;
@@ -42,15 +59,24 @@ ui <- fluidPage(
         font-weight: 600;
       }
       .header-banner .btn-logout {
-        background-color: rgba(255,255,255,0.85);
-        color: #2980B9;
-        font-weight: 500;
-        border: 1px solid #2980B9;
+        background-color: #FFC7C7 !important;
+        border-color:     #FFA3A3 !important;
+        color:            #800000 !important;
       }
       .header-banner .btn-logout:hover {
-        background-color: white;
-        color: #2C3E50;
-        border-color: #2C3E50;
+        background-color: #FFA3A3 !important;
+        border-color:     #FF8A8A !important;
+        color:            #660000 !important;
+      }
+      .header-banner .shiny-date-input {
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+      }
+      .header-banner .btn-logout {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
       }
 
       /* Sidebar styling as vertical nav */
@@ -58,9 +84,11 @@ ui <- fluidPage(
         background-color: #2C3E50;
         height: calc(100vh - 3.5rem); /* subtract header height (~3.5rem) */
         padding: 2rem 1rem;
-        border-right: 1px solid #1A252F;
         position: sticky;
         top: 3.5rem; /* stick just below header */
+      }
+      .sidebar .theme-selector {
+        margin-top: 60rem !important;
       }
       .sidebar h5 {
         margin-bottom: 1.5rem;
@@ -155,14 +183,12 @@ ui <- fluidPage(
 
       /* Badge container styling */
       .badge-container {
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        align-items: center;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
         gap: 30px;
-        flex-wrap: wrap;
-        transition: all 0.3s ease;
+        justify-items: center;
         padding: 1rem 0;
+        transition: all 0.3s ease;
       }
       .badge-item {
         position: relative;
@@ -231,13 +257,365 @@ ui <- fluidPage(
         background-color: #FDEDEC !important;  /* light red */
         color: #C0392B !important;             /* dark red */
       }
+      
+      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
+      /* Theme palettes — each prefix will be added as html.theme-<name> */
+      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
+      
+      /* DEFAULT (no changes) */
+      html.theme-default {}
+      
+      /* LIGHT: very light backgrounds, blue accents */
+      html.theme-light {
+        background-color: #FFFFFF !important;
+        color:            #2C3E50  !important;
+      }
+      html.theme-light body {
+        background-color: #FFFFFF !important;
+      }
+      html.theme-light .sidebar {
+        background-color: #F0F0F0 !important;
+      }
+      html.theme-light .card {
+        border-left-color: #2980B9 !important;
+      }
+      html.theme-light .header-banner {
+        background: linear-gradient(90deg, #F0F0F0, #F0F0F1) !important;
+        color:      #2C3E50 !important;
+      }
+      html.theme-light .section-title {
+        color: #2980B9 !important;
+      }
+      html.theme-light .sidebar .list-group-item {
+        background-color: #F8F9FA !important;
+        color:            #2C3E50  !important;
+        border-color:     #D0D0D0  !important;
+      }
+      html.theme-light .sidebar .list-group-item.active {
+        background-color: #2980B9 !important;
+        color:            #FFFFFF !important;
+        border-color:     #2980B9 !important;
+      }
+      html.theme-light .sidebar .list-group-item:hover {
+        background-color: #E0E0E0 !important;
+        color:            #2C3E50  !important;
+      }
+      /* ========== BUTTONS ========== */
+      html.theme-light .btn-primary {
+        background-color: #2980B9 !important;
+        border-color:     #2980B9 !important;
+        color:            #FFFFFF !important;
+      }
+      html.theme-light .btn-primary:hover {
+        background-color: #2C3E50 !important;
+        border-color:     #2C3E50 !important;
+      }
+      html.theme-light .btn-outline-primary {
+        color:         #2980B9 !important;
+        border-color:  #2980B9 !important;
+      }
+      html.theme-light .btn-outline-primary:hover {
+        background-color: #2980B9 !important;
+        color:            #FFFFFF !important;
+      }
+      /* ========== INPUTS & DROPDOWNS ========== */
+      html.theme-light input,
+      html.theme-light select,
+      html.theme-light textarea {
+        background-color: #FFFFFF !important;
+        color:            #2C3E50  !important;
+        border-color:     #D0D0D0  !important;
+      }
+      html.theme-light .selectize-input,
+      html.theme-light .selectize-dropdown {
+        background-color: #FFFFFF !important;
+        color:            #2C3E50  !important;
+        border-color:     #D0D0D0  !important;
+      }
+      /* ========== DATE-RANGE “to” ADDON ========== */
+      html.theme-light .input-group-addon,
+      html.theme-light .input-group-text {
+        background-color: #FFFFFF !important;
+        color:            #2C3E50  !important;
+        border-color:     #D0D0D0  !important;
+      }
+      
+      
+      /* DARK: charcoal backgrounds, orange accents */
+      html.theme-dark {
+        background-color: #2C2C2C !important;
+        color:            #EEEEEE !important;
+      }
+      html.theme-dark body {
+        background-color: #2C2C2C !important;
+      }
+      html.theme-dark .sidebar {
+        background-color: #3A3A3A !important;
+      }
+      html.theme-dark .card {
+        background-color:  #3A3A3A !important;
+        border-left-color:  #E67E22 !important;
+        color:             #EEEEEE  !important;
+      }
+      html.theme-dark .header-banner {
+        background: linear-gradient(90deg, #1A1A1A, #333333) !important;
+        color:      #E67E22 !important;
+      }
+      html.theme-dark .section-title {
+        color: #E67E22 !important;
+      }
+      html.theme-dark .sidebar .list-group-item {
+        background-color: #3A3A3A !important;
+        color:            #EEEEEE  !important;
+        border-color:     #444444  !important;
+      }
+      html.theme-dark .sidebar .list-group-item.active {
+        background-color: #E67E22 !important;
+        color:            #2C2C2C  !important;
+        border-color:     #E67E22  !important;
+      }
+      html.theme-dark .sidebar .list-group-item:hover {
+        background-color: #4A4A4A !important;
+        color:            #EEEEEE  !important;
+      }
+      /* ========== BUTTONS ========== */
+      html.theme-dark .btn-primary {
+        background-color: #E67E22 !important;
+        border-color:     #E67E22 !important;
+        color:            #FFFFFF !important;
+      }
+      html.theme-dark .btn-primary:hover {
+        background-color: #D35400 !important;
+        border-color:     #D35400 !important;
+      }
+      html.theme-dark .btn-outline-primary {
+        color:         #E67E22 !important;
+        border-color:  #E67E22 !important;
+      }
+      html.theme-dark .btn-outline-primary:hover {
+        background-color: #E67E22 !important;
+        color:            #FFFFFF !important;
+      }
+      /* ========== INPUTS & DROPDOWNS ========== */
+      html.theme-dark input,
+      html.theme-dark select,
+      html.theme-dark textarea {
+        background-color: #3A3A3A !important;
+        color:            #EEEEEE  !important;
+        border-color:     #444444  !important;
+      }
+      html.theme-dark .selectize-input,
+      html.theme-dark .selectize-dropdown {
+        background-color: #3A3A3A !important;
+        color:            #EEEEEE  !important;
+        border-color:     #444444  !important;
+      }
+      /* ========== DATE-RANGE “to” ADDON ========== */
+      html.theme-dark .input-group-addon,
+      html.theme-dark .input-group-text {
+        background-color: #3A3A3A !important;
+        color:            #EEEEEE  !important;
+        border-color:     #444444  !important;
+      }
+      
+      
+      /* OCEAN: teal backgrounds, sea-green accents */
+      html.theme-ocean {
+        background-color: #E0F7FA !important;
+      }
+      html.theme-ocean body {
+        background-color: #E0F7FA !important;
+      }
+      html.theme-ocean .sidebar {
+        background-color: #004D40 !important;
+      }
+      html.theme-ocean .card {
+        border-left-color: #00796B !important;
+      }
+      html.theme-ocean .header-banner {
+        background: linear-gradient(90deg, #004D40, #00796B) !important;
+        color:      #E0F7FA !important;
+      }
+      html.theme-ocean .section-title {
+        color: #004D40 !important;
+      }
+      html.theme-ocean .sidebar .list-group-item {
+        background-color: #004D40 !important;
+        color:            #E0F7FA !important;
+        border-color:     #00695C !important;
+      }
+      html.theme-ocean .sidebar .list-group-item.active {
+        background-color: #00796B !important;
+        color:            #FFFFFF !important;
+        border-color:     #00796B !important;
+      }
+      html.theme-ocean .sidebar .list-group-item:hover {
+        background-color: #00695C !important;
+        color:            #E0F7FA !important;
+      }
+      /* ========== BUTTONS ========== */
+      html.theme-ocean .btn-primary {
+        background-color: #00796B !important;
+        border-color:     #00796B !important;
+        color:            #FFFFFF !important;
+      }
+      html.theme-ocean .btn-primary:hover {
+        background-color: #004D40 !important;
+        border-color:     #004D40 !important;
+      }
+      html.theme-ocean .btn-outline-primary {
+        color:         #00796B !important;
+        border-color:  #00796B !important;
+      }
+      html.theme-ocean .btn-outline-primary:hover {
+        background-color: #00796B !important;
+        color:            #FFFFFF !important;
+      }
+      /* ========== INPUTS & DROPDOWNS ========== */
+      html.theme-ocean input,
+      html.theme-ocean select,
+      html.theme-ocean textarea {
+        background-color: #E0F7FA !important;
+        color:            #004D40  !important;
+        border-color:     #00695C  !important;
+      }
+      html.theme-ocean .selectize-input,
+      html.theme-ocean .selectize-dropdown {
+        background-color: #E0F7FA !important;
+        color:            #004D40  !important;
+        border-color:     #00695C  !important;
+      }
+      /* ========== DATE-RANGE “to” ADDON ========== */
+      html.theme-ocean .input-group-addon,
+      html.theme-ocean .input-group-text {
+        background-color: #E0F7FA !important;
+        color:            #004D40  !important;
+        border-color:     #00695C  !important;
+      }
+      
+      
+      /* SOLARIZED: cream backgrounds, golden accents */
+      html.theme-solarized {
+        background-color: #FDF6E3 !important;
+      }
+      html.theme-solarized body {
+        background-color: #FDF6E3 !important;
+      }
+      html.theme-solarized .sidebar {
+        background-color: #073642 !important;
+      }
+      html.theme-solarized .card {
+        border-left-color: #268BD2 !important;
+      }
+      html.theme-solarized .header-banner {
+        background: linear-gradient(90deg, #073642, #586E75) !important;
+        color:      #EEE8D5 !important;
+      }
+      html.theme-solarized .section-title {
+        color: #B58900 !important;
+      }
+      html.theme-solarized .sidebar .list-group-item {
+        background-color: #073642 !important;
+        color:            #EEE8D5 !important;
+        border-color:     #586E75 !important;
+      }
+      html.theme-solarized .sidebar .list-group-item.active {
+        background-color: #B58900 !important;
+        color:            #073642 !important;
+        border-color:     #B58900 !important;
+      }
+      html.theme-solarized .sidebar .list-group-item:hover {
+        background-color: #586E75 !important;
+        color:            #EEE8D5 !important;
+      }
+      /* ========== BUTTONS ========== */
+      html.theme-solarized .btn-primary {
+        background-color: #B58900 !important;
+        border-color:     #B58900 !important;
+        color:            #FFFFFF !important;
+      }
+      html.theme-solarized .btn-primary:hover {
+        background-color: #9C7400 !important;
+        border-color:     #9C7400 !important;
+      }
+      html.theme-solarized .btn-outline-primary {
+        color:         #B58900 !important;
+        border-color:  #B58900 !important;
+      }
+      html.theme-solarized .btn-outline-primary:hover {
+        background-color: #B58900 !important;
+        color:            #FFFFFF !important;
+      }
+      /* ========== INPUTS & DROPDOWNS ========== */
+      html.theme-solarized input,
+      html.theme-solarized select,
+      html.theme-solarized textarea {
+        background-color: #EEE8D5 !important;
+        color:            #073642 !important;
+        border-color:     #586E75 !important;
+      }
+      html.theme-solarized .selectize-input,
+      html.theme-solarized .selectize-dropdown {
+        background-color: #EEE8D5 !important;
+        color:            #073642 !important;
+        border-color:     #586E75 !important;
+      }
+      /* ========== DATE-RANGE “to” ADDON ========== */
+      html.theme-solarized .input-group-addon,
+      html.theme-solarized .input-group-text {
+        background-color: #EEE8D5 !important;
+        color:            #073642  !important;
+        border-color:     #586E75  !important;
+      }
+      
+      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
+      /* Styling shiny-date-range input */
+      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
+      
+      .input-group-text {
+        display:         flex   !important;
+        align-items:     center !important;
+        margin-right: 0.57rem !important;
+        font-size:       0      !important;
+      }
+      .input-group-text::before {
+        content:    '↔️'    !important;  /* en-dash */
+        font-size:  1rem  !important;
+        color:      currentColor !important;
+      }
+      .shiny-date-range .input-group {
+        align-items: center !important;
+      }
+      .shiny-date-range .input-group-text {
+        align-self:   center !important;
+      }
+      
+      .shiny-date-range .input-group-text {
+        /* strip away Bootstrap’s box so we only see our dash */
+        background:   transparent !important;
+        border:       none        !important;
+        font-size:    0           !important;
+        position:     relative    !important;
+      }
+      
+      .shiny-date-range .input-group-text::before {
+        content:      '<–>'         !important;
+        font-size:    1rem        !important;
+        color:        currentColor !important;
+        position:     absolute    !important;
+        top:          50%         !important;
+        left:         25%         !important;
+        transform:    translate(-50%, -50%) !important;
+      }
     "))
   ),
   uiOutput("mainUI")
 )
 
 server <- function(input, output, session) {
+  activity_completion <- reactiveValues(data = list())
   credentials <- reactiveValues(logged_in = FALSE, user_id = NULL, date = NULL)
+  credentials$theme <- "default"
   `%||%` <- function(a, b) if (!is.null(a)) a else b
   
   # Track selected course manually (initial: 28301)
@@ -252,11 +630,58 @@ server <- function(input, output, session) {
     credentials$logged_in <- TRUE
     credentials$user_id <- input$user_id_input
     credentials$date <- input$date_input
+    
+    # auto starts activity graph to assignments by submission for last 7 days
+    updateSelectInput(session, "data_type",
+                      selected = "Assignments")
+    updateDateRangeInput(session, "date_range",
+                         start = as.Date(credentials$date) - 7,
+                         end   = as.Date(credentials$date))
+    updateSelectInput(session, "metric",
+                      selected = "Number of Submissions")
+    shinyjs::click("submit_query")
+    
+    # load saved theme (if any)
+    prefs_file <- "all_users_data.json"
+    if (file.exists(prefs_file)) {
+      all <- jsonlite::read_json(prefs_file, simplifyVector = FALSE)
+      saved <- all[[credentials$user_id]]$theme %||% "default"
+      credentials$theme <- saved
+    }
+    # apply theme
+    shinyjs::removeClass(
+      class    = c("theme-default","theme-light","theme-dark","theme-ocean","theme-solarized"),
+      selector = "html"
+    )
+    # add the saved theme class to the <html> tag
+    shinyjs::addClass(
+      class    = paste0("theme-", credentials$theme),
+      selector = "html"
+    )
+    
+    
     # Clear old user data
     satisfaction_ratings$data <- list()
     expectation_ratings$data <- list()
     satisfaction_feedback_store$data <- list()
     reflection_saved$data <- list()
+  })
+  
+  observeEvent(input$date_input, {
+    req(credentials$logged_in)
+    credentials$date <- input$date_input
+    
+    # auto-start activity graph exactly as on login:
+    updateSelectInput(session, "data_type",
+                      selected = "Assignments")
+    # set the date_range to the last 7 days *ending* on the new banner date
+    updateDateRangeInput(session, "date_range",
+                         start = as.Date(input$date_input) - 7,
+                         end   = as.Date(input$date_input))
+    updateSelectInput(session, "metric",
+                      selected = "Number of Submissions")
+    # trigger the plot to redraw
+    shinyjs::click("submit_query")
   })
   
   # Update selectedCourse when sidebar links clicked
@@ -269,6 +694,7 @@ server <- function(input, output, session) {
   observe({
     req(credentials$logged_in, credentials$user_id)
     course <- selectedCourse()
+    week <- as.character(weekNumber())
     user_data <- loadUserData(credentials$user_id)
     
     if (is.list(user_data) && !is.null(user_data[[course]])) {
@@ -310,9 +736,21 @@ server <- function(input, output, session) {
         fluidRow(
           column(
             width = 12,
-            div(class = "header-banner",
+            div(class = "header-banner d-flex justify-content-between align-items-center",
                 h3("Self-Regulated Learning Dashboard"),
-                actionButton("logout_button", "Logout", class = "btn btn-logout")
+                # right‐side controls
+                div(class = "d-flex align-items-stretch", style = "gap:0.5rem;",
+                    # date picker: make its wrapper a flex box
+                    div(class = "shiny-date-input d-flex align-items-center", 
+                        dateInput("date_input", NULL,
+                                  value  = credentials$date,
+                                  format = "yyyy-mm-dd",
+                                  width  = "120px")
+                    ),
+                    # logout button: also flex + center
+                    actionButton("logout_button", "Logout",
+                                 class = "btn btn-logout d-flex align-items-center justify-content-center")
+                )
             )
           )
         ),
@@ -339,7 +777,7 @@ server <- function(input, output, session) {
                       ),
                       column(
                         width = 4,
-                        div(class = "text-end text-muted", textOutput("selectedUserId"))
+                        div(class = "p", textOutput("selectedUserId"))
                       )
                     )
                 ),
@@ -356,27 +794,42 @@ server <- function(input, output, session) {
                     # Reflections
                     div(class = "card p-3 mb-5",
                         div(class = "section-title", "Reflections"),
-                        selectInput("selected_week", "Select Week", choices = 1:10, selected = 1),
+                        textOutput("current_week_display"),
+                        br(),
                         uiOutput("satisfaction_ui"),
                         uiOutput("expectation_ui"),
                         uiOutput("save_button_ui"),
                         br(),
-                        div(class = "text-muted mb-3", textOutput("satisfaction_feedback")),
+                        div(class = "text-muted mb-3", uiOutput("satisfaction_feedback")),
                         uiOutput("streak_badge")
                     )
                   ),
                   # Right column
                   column(
                     width = 6,
-                    # Daily Activity Breakdown
+                    # ————————————————————————————————————————————————
+                    # Activity Tracker Graph Builder
+                    # ————————————————————————————————————————————————
                     div(class = "card p-3 mb-5",
-                        div(class = "section-title", "Daily Activity Breakdown"),
-                        tabsetPanel(
-                          id = "activityTabs",
-                          tabPanel("Files", plotlyOutput("filesPlot", height = "250px")),
-                          tabPanel("Quizzes", plotlyOutput("quizzesPlot", height = "250px")),
-                          tabPanel("Discussions", plotlyOutput("discussionsPlot", height = "250px"))
-                        )
+                        div(class = "section-title", "Activity Tracker Graph Builder"),
+                        fluidRow(
+                          column(4,
+                                 selectInput("data_type", "Select Data Type",
+                                             choices = c("Quizzes", "Files", "Discussions", "Assignments"),
+                                             selected = "Quizzes")
+                          ),
+                          column(4,
+                                 dateRangeInput("date_range", "Date Range",
+                                                start  = Sys.Date() - 7,
+                                                end    = Sys.Date(),
+                                                format = "yyyy-mm-dd")
+                          ),
+                          column(4,
+                                 uiOutput("metric_ui")
+                          )
+                        ),
+                        br(),
+                        plotlyOutput("activityPlot", height = "400px")
                     ),
                     # Badges
                     div(class = "card p-3 mb-5",
@@ -421,6 +874,20 @@ server <- function(input, output, session) {
                label   = "0HV100-2024",
                class   = paste0("list-group-item list-group-item-action",
                                 if (current == "27974") " active" else "")
+             ),
+             # Theme picker inline
+             div(class = "list-group-item theme-selector",
+                 selectInput("theme_choice", tags$strong("🎨 Theme Picker"),
+                             choices = c(
+                               "Default"    = "default",
+                               "Light"      = "light",
+                               "Dark"       = "dark",
+                               "Ocean"      = "ocean",
+                               "Solarized"  = "solarized"
+                             ),
+                             selected = credentials$theme,
+                             width = "100%"),
+                 actionButton("apply_theme", "Apply", class = "btn btn-outline-primary btn-sm mt-2")
              )
     )
   })
@@ -430,6 +897,15 @@ server <- function(input, output, session) {
   #########################
   course_id <- reactive({ selectedCourse() })
   user_id <- reactive({ credentials$user_id })
+  
+  weekNumber <- reactive({
+    course_start_date <- as.Date("2024-11-11")
+    login_date <- as.Date(credentials$date)
+    num <- as.integer(floor(as.numeric(difftime(login_date, course_start_date, units = "days")) / 7)) + 1
+    min(max(1, num), 10)
+  })
+  
+  activity_completion <- reactiveValues(data = list())
   
   satisfaction_ratings <- reactiveValues(data = list())
   expectation_ratings <- reactiveValues(data = list())
@@ -451,11 +927,33 @@ server <- function(input, output, session) {
   #########################
   # Save / Update Reflection logic
   #########################
+  saveActivityCompletion <- function(user_id, course_id, block, completion) {
+    path <- "activity_completion_data.json"
+    data <- if (file.exists(path)) jsonlite::read_json(path, simplifyVector = FALSE) else list()
+    uid <- as.character(user_id); cid <- as.character(course_id); blk <- as.character(block)
+    data[[uid]] <- data[[uid]] %||% list()
+    data[[uid]][[cid]] <- data[[uid]][[cid]] %||% list()
+    data[[uid]][[cid]][[blk]] <- completion
+    jsonlite::write_json(data, path, pretty = TRUE, auto_unbox = TRUE)
+  }
+  
+  loadActivityCompletion <- function(user_id) {
+    path <- "activity_completion_data.json"
+    if (!file.exists(path)) return(list())
+    data <- jsonlite::read_json(path, simplifyVector = FALSE)
+    data[[as.character(user_id)]] %||% list()
+  }
+  
+  observe({
+    req(credentials$logged_in)
+    activity_completion$data <- loadActivityCompletion(credentials$user_id)
+  })
+  
   observeEvent(input$save_rating, {
     save_count$count <- save_count$count + 1
     course <- selectedCourse()
-    this_week <- as.character(input$selected_week)
-    last_week <- as.character(as.numeric(input$selected_week) - 1)
+    this_week <- as.character(weekNumber())
+    last_week <- as.character(as.numeric(weekNumber()) - 1)
     
     if (is.null(satisfaction_ratings$data[[course]])) satisfaction_ratings$data[[course]] <- list()
     if (is.null(expectation_ratings$data[[course]])) expectation_ratings$data[[course]] <- list()
@@ -496,7 +994,7 @@ server <- function(input, output, session) {
     saveAllUserData(
       user_id = user_id(),
       course_id = course,
-      week = input$selected_week,
+      week = this_week,
       satisfaction = input$satisfaction,
       expectation = input$expectation,
       feedback = feedback
@@ -506,7 +1004,7 @@ server <- function(input, output, session) {
   observeEvent(input$refresh_rating, ignoreInit = TRUE, {
     save_count$count <- save_count$count - 1
     course <- selectedCourse()
-    week <- as.character(input$selected_week)
+    week <- as.character(weekNumber())
     user <- credentials$user_id
     
     isolate({
@@ -577,7 +1075,7 @@ server <- function(input, output, session) {
   
   observeEvent(selectedCourse(), {
     course <- selectedCourse()
-    week <- as.character(input$selected_week)
+    week <- weekNumber()
     if (!is.null(satisfaction_feedback_store$data[[course]]) &&
         !is.null(satisfaction_feedback_store$data[[course]][[week]])) {
       output$satisfaction_feedback <- renderText({
@@ -586,6 +1084,37 @@ server <- function(input, output, session) {
     } else {
       output$satisfaction_feedback <- renderText({ "" })
     }
+  })
+  
+  # helper to write theme into the same JSON
+  saveUserTheme <- function(user, theme) {
+    path <- "all_users_data.json"
+    data <- list()
+    if (file.exists(path)) data <- jsonlite::read_json(path, simplifyVector = FALSE)
+    if (is.null(data[[user]])) data[[user]] <- list()
+    data[[user]]$theme <- theme
+    jsonlite::write_json(data, path, pretty = TRUE, auto_unbox = TRUE)
+  }
+  
+  # when "Apply" clicked, swap the CSS class and persist
+  observeEvent(input$apply_theme, {
+    req(credentials$logged_in, input$theme_choice)
+    newt <- input$theme_choice
+    newt_cap <- paste0(toupper(substr(newt, 1, 1)), substr(newt, 2, nchar(newt)))
+    showNotification(paste("Applying theme:", newt_cap), type = "message")
+    credentials$theme <- newt
+    saveUserTheme(credentials$user_id, newt)
+    
+    # write to your JSON prefs
+    shinyjs::removeClass(
+      class    = c("theme-default","theme-light","theme-dark","theme-ocean","theme-solarized"),
+      selector = "html"
+    )
+    # then apply the newly chosen theme
+    shinyjs::addClass(
+      class    = paste0("theme-", newt),
+      selector = "html"
+    )
   })
   
   #########################
@@ -597,6 +1126,7 @@ server <- function(input, output, session) {
     course_id_value <- course_id()
     user_id_value <- user_id()
     date_value <- credentials$date
+    week <- weekNumber()
     
     # Example query - replace with actual DB connection details
     totat_sec_result <- tbl(sc, in_schema("sandbox_la_conijn_CBL", "silver_canvas_enrollments")) %>%
@@ -615,116 +1145,65 @@ server <- function(input, output, session) {
   })
   
   output$activityTracker <- renderUI({
-    # Require user_id and that the login date has been set
     req(user_id(), credentials$date)
     
     course <- as.character(course_id())
-    user <- user_id()
+    user <- credentials$user_id
     
-    # Get the current week number from your reactive
-    week <- weekNumber() 
+    week <- weekNumber()
     
-    # # Determine the 2-week block to display
-    # if (week == 1) {
-    #   # For the very first week, only show Week 1 activities
-    #   all_activities <- make_week_activities(1)
-    #   
-    #   # Define block_start for the completion tracking logic that follows
-    #   block_start <- 1 
-    #   
-    # } else {
-    #   # For all other weeks, show the current week and the previous week
-    #   block_start <- week - 1
-    #   block_end <- week
-    #   
-    #   # Create the list of activities for both weeks
-    #   all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
-    # }
+    block_start <- (( (week - 1) %/% 2) * 2) + 1
+    block_end <- block_start + 1
     
-    #---------------------------------------------------------------------
-    # 1. NEW HELPER FUNCTION - Get Timestamps for a Given Week
-    #    (This replaces the data.frame lookup from the previous answer)
-    #---------------------------------------------------------------------
-    get_week_timestamps <- function(week_num, course_start_date) {
-      # Week 1 starts on day 0, Week 2 on day 7, etc.
-      start_of_week <- course_start_date + (7 * (week_num - 1))
-      end_of_week   <- start_of_week + 7
+    reflected <- function(week) {
+      isTRUE(reflection_saved$data[[course]][[as.character(week)]])
+    }
+    
+    make_week_activities <- function(week) {
+      quiz_name <- sprintf("Submit Week %d Quiz", week)
+      reflection_name <- sprintf("Reflect on Week %d", week)
+      assignment_name <- sprintf("Submit Week %d Assignment", week)
       
-      # Format for the SQL query
-      list(
-        start_time = paste0(start_of_week, " 00:00:00.000"),
-        end_time = paste0(end_of_week, " 00:00:00.000")
-      )
-    }
-    
-    #---------------------------------------------------------------------
-    # 2. HELPER FUNCTIONS - Reusable Database Queries (Unchanged)
-    #---------------------------------------------------------------------
-    is_quiz_submitted <- function(user_id, start_time, end_time, db_con) {
-      query <- sprintf("
-      SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
-      WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'complete') AND 
-      finished_at_anonymous >= '%s' AND finished_at_anonymous < '%s';",
-                       user_id, start_time, end_time
-      )
-      result <- tryCatch({ dbGetQuery(db_con, query) },
-                         error = function(e) { cat("Error querying quiz subs:", e$message, "\n"); data.frame(submitted = FALSE) }
-      )
-      return(if (nrow(result) > 0) result$submitted[1] else FALSE)
-    }
-    
-    is_assignment_submitted <- function(user_id, start_time, end_time, db_con) {
-      query <- sprintf("
-      SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_submissions
-      WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'graded', 'submitted') AND 
-      submitted_at_anonymous >= '%s' AND submitted_at_anonymous < '%s';",
-                       user_id, start_time, end_time
-      )
-      result <- tryCatch({ dbGetQuery(db_con, query) },
-                         error = function(e) { cat("Error querying assignment subs:", e$message, "\n"); data.frame(submitted = FALSE) }
-      )
-      return(if (nrow(result) > 0) result$submitted[1] else FALSE)
-    }
-    
-    #---------------------------------------------------------------------
-    # 3. DYNAMIC ACTIVITY GENERATION (Now using the new timestamp function)
-    #---------------------------------------------------------------------
-    reflected <- function(week_num) {
-      isTRUE(reflection_saved$data[[course]][[as.character(week_num)]])
-    }
-    
-    make_week_activities <- function(week_num) {
-      # Generate timestamps dynamically using the course start date
-      timestamps <- get_week_timestamps(week_num, COURSE_START_DATE)
-      
-      # Use the helper functions to query the database
-      quiz_done <- is_quiz_submitted(user, timestamps$start_time, timestamps$end_time, sc)
-      assignment_done <- is_assignment_submitted(user, timestamps$start_time, timestamps$end_time, sc)
+      quiz_done <- TRUE
+      assignment_done <- TRUE
       
       list(
-        list(name = sprintf("Submit Week %d Quiz", week_num), done = quiz_done),
-        list(name = sprintf("Submit Week %d Assignment", week_num), done = assignment_done),
-        list(name = sprintf("Reflect on Week %d", week_num), done = reflected(week_num))
+        list(name = quiz_name, done = quiz_done),
+        list(name = assignment_name, done = assignment_done),
+        list(name = reflection_name, done = reflected(week))
       )
     }
     
-    if (week == 1) {
-      # For the very first week, only show Week 1 activities
-      all_activities <- make_week_activities(1)
-      # The block is just week 1
-      block_start <- 1 
-    } else {
-      # For all other weeks, show the current week and the previous week
-      block_start <- week - 1
-      block_end <- week
-      all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
-    }    
-    #---------------------------------------------------------------------
-    # 4. PROGRESS & UI (Unchanged)
-    #---------------------------------------------------------------------
+    all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
     total <- length(all_activities)
     completed <- sum(sapply(all_activities, function(x) x$done))
     percent <- if (total > 0) round((completed / total) * 100) else 0
+    completion <- 0
+    block <- as.character(block_start)
+    
+    if (percent == 100) {
+      completion <- 1
+      if (is.null(activity_completion$data[[course]])) {
+        activity_completion$data[[course]] <- list()
+      }
+      activity_completion$data[[course]][[block]] <- TRUE
+      saveActivityCompletion(user_id(), course, block, TRUE)
+    } else if (completion == 1) {
+      completion <- 0
+      isolate({ activity_completion$data[[course]][[block]] <- NULL })
+      file_path <- "activity_completion_data.json"
+      if (file.exists(file_path)) {
+        data <- jsonlite::read_json(file_path, simplifyVector = FALSE)
+        if (!is.null(data[[user]][[course]][[block]])) {
+          data[[user]][[course]][[block]] <- NULL
+          if (length(data[[user]][[course]]) == 0) data[[user]][[course]] <- NULL
+          if (length(data[[user]]) == 0) data[[user]] <- NULL
+          jsonlite::write_json(data, file_path, pretty = TRUE, auto_unbox = TRUE)
+        }
+      }
+    } else {
+      activity_completion$data[[course]][[block]] <- FALSE
+    }
     
     # Feedback generation logic
     activity_feedback_text <- ""
@@ -737,7 +1216,6 @@ server <- function(input, output, session) {
     }
     feedback_html <- sprintf("<div class='alert alert-info mt-3' role='alert'>%s</div>", activity_feedback_text)
     
-    # Generate HTML for activity list and progress bar
     list_items <- paste0(
       "<ul class='list-group mb-3'>",
       paste(sapply(all_activities, function(x) {
@@ -746,193 +1224,343 @@ server <- function(input, output, session) {
         } else {
           sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-muted'>⬜ %s</li>", x$name)
         }
-      }), collapse = ""), "</ul>"
+      }), collapse = ""),
+      "</ul>"
     )
+    
     progress_bar <- sprintf("<div class='progress'><div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>%d%%</div></div>", percent, percent, percent)
     
     HTML(paste0(list_items, progress_bar, feedback_html))
   })
-  # -------------------------------------------------------------------
-  # REAL DATA FOR PLOTS (last 7 days up to selected login date, per user_id)
-  # -------------------------------------------------------------------
   
-  ## FILES PLOT: count of “files” actions in web_logs
-  output$filesPlot <- renderPlotly({
-    req(credentials$logged_in, credentials$user_id, credentials$date)
-    
-    # Build an 8-day window: [selected_date - 7, selected_date]
-    end_date   <- as.Date(credentials$date)
-    start_date <- end_date - 7
-    
-    # Use timestamp range instead of CAST(… AS DATE)
-    # We include all of end_date by using < (end_date + 1)
-    start_ts <- paste0(start_date, " 00:00:00")
-    end_ts   <- paste0(end_date + 1, " 00:00:00")
-    
-    query_files <- sprintf("
-      SELECT
-        CAST(timestamp AS DATE) AS activity_date,
-        COUNT(*)                AS file_count
-      FROM sandbox_la_conijn_cbl.silver_canvas_web_logs
-      WHERE user_id = '%s'
-        AND web_application_controller = 'files'
-        AND timestamp BETWEEN '%s' AND '%s'
-        AND course_id = %s
-      GROUP BY CAST(timestamp AS DATE)
-      ORDER BY activity_date;
-    ",
-                           credentials$user_id,
-                           start_ts,
-                           end_ts,
-                           course_id()
+  # ----------------------------
+  # Dynamic Metric Selector UI
+  # ----------------------------
+  output$metric_ui <- renderUI({
+    req(input$data_type)
+    switch(input$data_type,
+           "Quizzes" = selectInput(
+             "metric", "Metric",
+             choices = c("Time Spent", "Number of Submissions"),
+             selected = "Time Spent"
+           ),
+           "Files" = selectInput(
+             "metric", "Metric",
+             choices = c("Number of Submissions"),
+             selected = "Number of Submissions"
+           ),
+           "Discussions" = selectInput(
+             "metric", "Metric",
+             choices = c("Number of Posts"),
+             selected = "Number of Posts"
+           ),
+           "Assignments" = selectInput(
+             "metric", "Metric",
+             choices = c("Number of Submissions", "Average Score"),
+             selected = "Number of Submissions"
+           )
     )
-    
-    df_files <- tryCatch({
-      dbGetQuery(sc, query_files)
-    }, error = function(e) {
-      data.frame(
-        activity_date = seq.Date(start_date, end_date, by = "day"),
-        file_count    = rep(0L, 8)
-      )
-    })
-    
-    all_days <- data.frame(activity_date = seq.Date(start_date, end_date, by = "day"))
-    df_files <- merge(all_days, df_files, by = "activity_date", all.x = TRUE)
-    df_files$file_count[is.na(df_files$file_count)] <- 0
-    
-    plot_ly(
-      df_files,
-      x = ~activity_date,
-      y = ~file_count,
-      type = 'scatter',
-      mode = 'lines+markers',
-      name = 'Files'
-    ) %>%
-      layout(
-        title = "Files Accessed per Day",
-        xaxis = list(title = "Date"),
-        yaxis = list(title = "Activity Count"),
-        hovermode = "x unified"
-      )
   })
   
-  ## QUIZZES PLOT: sum of DurationInMinutes per day from quiz_submissions
-  output$quizzesPlot <- renderPlotly({
-    req(credentials$logged_in, credentials$user_id, credentials$date)
-    
-    end_date   <- as.Date(credentials$date)
-    start_date <- end_date - 7
-    
-    start_ts <- paste0(start_date, " 00:00:00")
-    end_ts   <- paste0(end_date + 1, " 00:00:00")
-    
-    query_quizzes <- sprintf("
-      SELECT
-        CAST(finished_at_anonymous AS DATE) AS attempt_date,
-        COALESCE(SUM(DurationInMinutes), 0)  AS total_time_spent
-      FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
-      WHERE user_id = '%s'
-        AND finished_at_anonymous BETWEEN '%s' AND '%s'
-        AND course_id = %s
-      GROUP BY CAST(finished_at_anonymous AS DATE)
-      ORDER BY attempt_date;
-    ",
-                             credentials$user_id,
-                             start_ts,
-                             end_ts,
-                             course_id()
-    )
-    
-    df_quizzes <- tryCatch({
-      dbGetQuery(sc, query_quizzes)
-    }, error = function(e) {
-      data.frame(
-        attempt_date     = seq.Date(start_date, end_date, by = "day"),
-        total_time_spent = rep(0L, 8)
+  # ----------------------------------------
+  # Reactive Data Fetcher for ActivityData
+  # ----------------------------------------
+  activityData <- eventReactive(
+    { 
+      input$submit_query
+      input$data_type
+      input$date_range
+      input$metric
+    },
+    {
+      req(input$data_type, input$date_range, input$metric)
+      
+      # build timestamps
+      start_ts <- paste0(input$date_range[1], " 00:00:00")
+      end_ts   <- paste0(input$date_range[2] + 1, " 00:00:00")
+      user     <- credentials$user_id
+      course   <- course_id()
+      
+      # pick table, date column, aggregation & y‐axis label
+      if (input$data_type == "Quizzes") {
+        tbl      <- "silver_canvas_quiz_submissions"
+        date_col <- "finished_at_anonymous"
+        if (input$metric == "Time Spent") {
+          agg_expr <- "COALESCE(SUM(DurationInMinutes),0) AS value"
+          ylab     <- "Time Spent (min)"
+        } else {
+          agg_expr <- "COUNT(*) AS value"
+          ylab     <- "Submissions"
+        }
+      } else if (input$data_type == "Files") {
+        tbl      <- "silver_canvas_web_logs"
+        date_col <- "timestamp"
+        agg_expr <- "COUNT(*) AS value"
+        ylab     <- "File Accesses"
+      } else if (input$data_type == "Discussions") {
+        tbl      <- "silver_canvas_discussion_entries"
+        date_col <- "created_at_anonymous"
+        agg_expr <- "COUNT(*) AS value"
+        ylab     <- "Posts"
+      } else if (input$data_type == "Assignments") {
+        tbl      <- "silver_canvas_submissions"
+        date_col <- "submitted_at_anonymous"
+        if (input$metric == "Number of Submissions") {
+          agg_expr <- "COUNT(*) AS value"
+          ylab     <- "Submissions"
+        } else {
+          agg_expr <- "COALESCE(AVG(score_anonymous),0) AS value"
+          ylab     <- "Average Score"
+        }
+      }
+      
+      # construct and run query
+      query <- sprintf("
+    SELECT
+      CAST(%s AS DATE) AS day,
+      %s
+    FROM sandbox_la_conijn_cbl.%s
+    WHERE user_id = '%s'
+      AND %s BETWEEN '%s' AND '%s'
+      AND course_id = %s
+    GROUP BY CAST(%s AS DATE)
+    ORDER BY day;
+  ", date_col, agg_expr, tbl, user, date_col, start_ts, end_ts, course, date_col)
+      
+      df <- tryCatch(
+        dbGetQuery(sc, query),
+        error = function(e) {
+          # if error, return zeros for full range
+          days <- seq.Date(input$date_range[1], input$date_range[2], by = "day")
+          data.frame(day = days, value = 0)
+        }
       )
+      
+      # ensure every day is present
+      all_days <- data.frame(day = seq.Date(input$date_range[1], input$date_range[2], by = "day"))
+      df       <- merge(all_days, df, by = "day", all.x = TRUE)
+      df$value[is.na(df$value)] <- 0
+      
+      list(df = df, ylab = ylab)
     })
-    
-    all_days <- data.frame(attempt_date = seq.Date(start_date, end_date, by = "day"))
-    df_quizzes <- merge(all_days, df_quizzes, by = "attempt_date", all.x = TRUE)
-    df_quizzes$total_time_spent[is.na(df_quizzes$total_time_spent)] <- 0
-    
-    plot_ly(
-      df_quizzes,
-      x = ~attempt_date,
-      y = ~total_time_spent,
-      type = 'scatter',
-      mode = 'lines+markers',
-      name = 'Quizzes'
-    ) %>%
-      layout(
-        title = "Time Spent on Quizzes",
-        xaxis = list(title = "Date"),
-        yaxis = list(title = "Time Spent (min)"),
-        hovermode = "x unified"
-      )
-  })
   
-  ## DISCUSSIONS PLOT: count of discussion entries per day
-  output$discussionsPlot <- renderPlotly({
-    course <- selectedCourse()
-    req(credentials$logged_in, credentials$user_id, credentials$date)
-    
-    end_date   <- as.Date(credentials$date)
-    start_date <- end_date - 7
-    
-    start_ts <- paste0(start_date, " 00:00:00")
-    end_ts   <- paste0(end_date + 1, " 00:00:00")
-    
-    query_discussions <- sprintf("
-      SELECT
-        CAST(created_at_anonymous AS DATE) AS post_date,
-        COUNT(*)                        AS posts_count
-      FROM sandbox_la_conijn_cbl.silver_canvas_discussion_entries
-      WHERE user_id = '%s'
-        AND created_at_anonymous BETWEEN '%s' AND '%s'
-        AND course_id = %s
-      GROUP BY CAST(created_at_anonymous AS DATE)
-      ORDER BY post_date;
-    ",
-                                 credentials$user_id,
-                                 start_ts,
-                                 end_ts,
-                                 course_id()
-    )
-    
-    df_discussions <- tryCatch({
-      dbGetQuery(sc, query_discussions)
-    }, error = function(e) {
-      data.frame(
-        post_date   = seq.Date(start_date, end_date, by = "day"),
-        posts_count = rep(0L, 8)
+  # single unified plot
+  output$activityPlot <- renderPlotly({
+    suppressWarnings({
+      dat <- activityData()
+      req(dat)
+      th     <- credentials$theme
+      accent <- switch(th,
+                       "light"     = "#2980B9",
+                       "dark"      = "#E67E22",
+                       "ocean"     = "#00796B",
+                       "solarized" = "#B58900",
+                       "#2980B9"   # default
+      )
+      bg     <- switch(th,
+                       "light"     = "#FFFFFF",
+                       "dark"      = "#2C2C2C",
+                       "ocean"     = "#E0F7FA",
+                       "solarized" = "#FDF6E3",
+                       "#F0F2F5"
+      )
+      txt    <- switch(th,
+                       "light"     = "#2C3E50",
+                       "dark"      = "#EEEEEE",
+                       "ocean"     = "#004D40",
+                       "solarized" = "#073642",
+                       "#2C3E50"
+      )
+      palette <- switch(th,
+                        "light"     = c("#2980B9",  # blue accent
+                                        "#27AE60",  # green
+                                        "#E67E22",  # orange
+                                        "#8E44AD"), # purple
+                        "dark"      = c("#E67E22",  # orange accent
+                                        "#3498DB",  # sky blue
+                                        "#2ECC71",  # bright green
+                                        "#9B59B6"), # magenta
+                        "ocean"     = c("#00796B",  # teal accent
+                                        "#0288D1",  # ocean blue
+                                        "#FF5722",  # coral
+                                        "#FFC107"), # amber
+                        "solarized" = c("#B58900",  # gold accent
+                                        "#268BD2",  # blue
+                                        "#2AA198",  # cyan
+                                        "#CB4B16"), # orange
+                        c("#2980B9","#27AE60","#E67E22","#8E44AD")
+      )
+      df_full <- dat$df
+      ylab    <- dat$ylab
+      
+      # For Average Score I already dropped zeros in activityData(),
+      # but here I want the same rule for all metrics:
+      df_active <- df_full[df_full$value > 0, ]
+      
+      # Compute summaries only on active days:
+      if (nrow(df_active) > 0) {
+        summary_avg <- round(mean(df_active$value), 2)
+        summary_med <- round(median(df_active$value), 2)
+        summary_min <- round(min(df_active$value), 2)
+        summary_max <- round(max(df_active$value), 2)
+      } else {
+        summary_avg <- summary_med <- summary_min <- summary_max <- 0
+      }
+      
+      # Base trace: lines+markers for counts/time; markers only for Average Score
+      base <- if (input$metric == "Average Score") {
+        plot_ly(
+          df_active,
+          x    = ~day, y = ~value,
+          type = 'scatter', mode = 'markers',
+          name = 'Daily Avg'
+        )
+      } else {
+        plot_ly(
+          df_full,
+          x    = ~day, y = ~value,
+          type = 'scatter', mode = 'lines+markers',
+          line   = list(color = accent),
+          marker = list(color = accent),
+          name = input$metric
+        )
+      }
+      
+      # Overlay summaries across full date axis
+      p <- base %>%
+        add_trace(
+          x = df_full$day,
+          y = rep(summary_avg, nrow(df_full)),
+          type = 'scatter',
+          mode = 'lines+markers',
+          name = sprintf("Avg (%.2f)", summary_avg),
+          line = list(dash = 'dash', color = palette[1]),
+          marker = list(color = palette[1]),
+          opacity = 1
+        ) %>%
+        add_trace(
+          x = df_full$day,
+          y = rep(summary_med, nrow(df_full)),
+          type = 'scatter',
+          mode = 'lines+markers',
+          name = sprintf("Med (%.2f)", summary_med),
+          line = list(dash = 'dot', color = palette[2]),
+          marker = list(color = palette[2]),
+          opacity = 1
+        ) %>%
+        add_trace(
+          x = df_full$day,
+          y = rep(summary_min, nrow(df_full)),
+          type = 'scatter',
+          mode = 'lines+markers',
+          name = sprintf("Min (%.2f)", summary_min),
+          line = list(dash = 'dashdot', color = palette[3]),
+          marker = list(color = palette[3]),
+          opacity = 1
+        ) %>%
+        add_trace(
+          x = df_full$day,
+          y = rep(summary_max, nrow(df_full)),
+          type = 'scatter',
+          mode = 'lines+markers',
+          name = sprintf("Max (%.2f)", summary_max),
+          line = list(dash = 'longdash', color = palette[4]),
+          marker = list(color = palette[4]),
+          opacity = 1
+        )
+      
+      
+      # Count how many active days vs. total days
+      total_days  <- nrow(df_full)
+      active_days <- nrow(df_active)
+      stats_text  <- sprintf(
+        "Active Days: %d/%d | Avg=%.2f | Med=%.2f | Min=%.2f | Max=%.2f",
+        active_days, total_days,
+        summary_avg, summary_med, summary_min, summary_max
+      )
+      
+      p %>% layout(
+        # Plot title configuration
+        title = list(
+          text    = paste(input$data_type, input$metric, "over Time"),
+          font    = list(size = 14),
+          x       = 0.5,          # center the title
+          xanchor = "center"
+        ),
+        
+        # Margins around the plotting area (in pixels)
+        margin = list(
+          t = 100,  # top margin to give space above the plot (for toolbar/annotations)
+          b = 80,   # bottom margin for x-axis title and legend
+          l = 80,   # left margin for y-axis title
+          r = 40    # right margin for any additional elements
+        ),
+        
+        # Plotly theme matching recolor
+        paper_bgcolor = bg,
+        plot_bgcolor  = bg,
+        font = list(color = txt),
+        
+        # Annotation for stats text
+        annotations = list(
+          list(
+            x       = 0.47,        # center of the plotting area
+            xref    = "paper",
+            xanchor = "center",   # anchor annotation by its center
+            y       = 1.12,       # just above the plot
+            yref    = "paper",
+            text    = stats_text,
+            showarrow = FALSE,
+            font    = list(size = 11)
+          )
+        ),
+        
+        # X-axis styling
+        xaxis = list(
+          title = list(
+            text     = "Date",       # label for the x-axis
+            font     = list(size = 12), # font size for x-axis label
+            standoff = 10            # padding (in pixels) between tick labels and axis title
+          ),
+          tickfont   = list(size = 10),  # font size for tick labels
+          automargin = TRUE              # let Plotly auto-adjust margins if labels get cut off
+        ),
+        
+        # Y-axis styling
+        yaxis = list(
+          title = list(
+            text     = ylab,         # dynamic y-axis label (e.g., "Submissions")
+            font     = list(size = 12), # font size for y-axis label
+            standoff = 30            # padding between tick labels and axis title
+          ),
+          tickfont   = list(size = 10),  # font size for tick labels
+          automargin = TRUE              # auto-adjust margins if needed
+        ),
+        
+        # Legend placement and styling
+        legend = list(
+          font        = list(size = 10), # font size for legend items
+          orientation = "h",             # horizontal layout
+          x           = 0.5,             # horizontal center of legend (in paper coords)
+          xanchor     = "center",        # anchor legend at its center horizontally
+          y           = -0.3             # vertical position into bottom margin (negative moves below plot)
+        ),
+        
+        # Hover label styling
+        hoverlabel = list(
+          font = list(size = 11)         # font size for hover tooltips
+        ),
+        
+        # Hover behavior
+        hovermode  = "x unified"         # show a single vertical tooltip box for all traces at the same x
       )
     })
-    
-    all_days <- data.frame(post_date = seq.Date(start_date, end_date, by = "day"))
-    df_discussions <- merge(all_days, df_discussions, by = "post_date", all.x = TRUE)
-    df_discussions$posts_count[is.na(df_discussions$posts_count)] <- 0
-    
-    plot_ly(
-      df_discussions,
-      x = ~post_date,
-      y = ~posts_count,
-      type = 'scatter',
-      mode = 'lines+markers',
-      name = 'Discussions'
-    ) %>%
-      layout(
-        title = "Discussion Posts per Day",
-        xaxis = list(title = "Date"),
-        yaxis = list(title = "Posts Count"),
-        hovermode = "x unified"
-      )
   })
   
   # Satisfaction input or plain text if saved
   output$satisfaction_ui <- renderUI({
     course <- selectedCourse()
-    week <- as.character(input$selected_week)
+    week <- as.character(weekNumber())
     saved <- !is.null(reflection_saved$data[[course]][[week]]) && reflection_saved$data[[course]][[week]]
     
     if (saved) {
@@ -951,7 +1579,7 @@ server <- function(input, output, session) {
   # Expectation input or plain text if saved
   output$expectation_ui <- renderUI({
     course <- selectedCourse()
-    week <- as.character(input$selected_week)
+    week <- as.character(weekNumber())
     saved <- !is.null(reflection_saved$data[[course]][[week]]) && reflection_saved$data[[course]][[week]]
     
     if (saved) {
@@ -970,7 +1598,7 @@ server <- function(input, output, session) {
   # Save or Update button
   output$save_button_ui <- renderUI({
     course <- selectedCourse()
-    week <- as.character(input$selected_week)
+    week <- as.character(weekNumber())
     saved <- !is.null(reflection_saved$data[[course]][[week]]) && reflection_saved$data[[course]][[week]]
     
     if (!saved) {
@@ -983,7 +1611,7 @@ server <- function(input, output, session) {
   # Streak Badge
   output$streak_badge <- renderUI({
     course <- selectedCourse()
-    week <- as.numeric(input$selected_week)
+    week <- as.character(weekNumber())
     
     if (is.null(reflection_saved$data[[course]]) ||
         is.null(reflection_saved$data[[course]][[as.character(week)]]) ||
@@ -1006,11 +1634,7 @@ server <- function(input, output, session) {
     }
     
     if (streak >= 2) {
-      HTML(sprintf("
-        <div class='alert alert-warning mt-3'>
-          🏅 <strong>%d-Week Streak!</strong> Reflection badge for %d consecutive submissions.
-        </div>
-      ", streak, streak))
+      HTML(sprintf("<div class='alert alert-warning mt-3'>🏅 <strong>%d-Week Streak!</strong> Reflection badge for %d consecutive submissions.</div>", streak, streak))
     } else {
       return(NULL)
     }
@@ -1022,50 +1646,37 @@ server <- function(input, output, session) {
     
     course <- selectedCourse()
     reflections <- reflection_saved$data[[course]]
+    activity_blocks <- activity_completion$data[[course]]
     
     reflection_count <- if (!is.null(reflections)) {
       sum(unlist(reflections), na.rm = TRUE)
-    } else {
-      0
-    }
+    } else { 0 }
+    
+    completed_block_count <- if (!is.null(activity_blocks)) {
+      sum(unlist(activity_blocks), na.rm = TRUE)
+    } else { 0 }
     
     badges <- list(
-      list(
-        threshold = 1,
-        unlocked_img = "ROOKIE.png",
-        unlocked_tooltip = "Your first reflection - Nice start!",
-        locked_tooltip = "Reflect for the first time."
-      ),
-      list(
-        threshold = 4,
-        unlocked_img = "CONSISTENT.png",
-        unlocked_tooltip = "4 weeks of reflections - Keep reflecting!",
-        locked_tooltip = "Reflect for 4 weeks."
-      ),
-      list(
-        threshold = 8,
-        unlocked_img = "MASTER.png",
-        unlocked_tooltip = "8 weeks of reflecting?! – Good job!",
-        locked_tooltip = "Reflect for 8 weeks."
-      )
+      list(threshold = 1, unlocked_img = "ROOKIE.png", unlocked_tooltip = "Your first reflection - Nice start!", locked_tooltip = "Reflect for the first time."),
+      list(threshold = 4, unlocked_img = "CONSISTENT.png", unlocked_tooltip = "4 weeks of reflections - Keep reflecting!", locked_tooltip = "Reflect for 4 weeks."),
+      list(threshold = 8, unlocked_img = "MASTER.png", unlocked_tooltip = "8 weeks of reflecting?! – Good job!", locked_tooltip = "Reflect for 8 weeks."),
+      list(id = "selfaware", threshold = 1, unlocked_img = "SELF-AWARE.png", unlocked_tooltip = "You have completed all your activities - Nice start!", locked_tooltip = "Complete the activity tracker for the first time."),
+      list(id = "insightchampion", threshold = 2, unlocked_img = "INSIGHT.png", unlocked_tooltip = "You have finished your second block of activities - Very nice!", locked_tooltip = "Complete the activity tracker for the second time."),
+      list(id = "kingofwisdom", threshold = 4, unlocked_img = "KING.png", unlocked_tooltip = "You have complete all the activities for this course - Amazing!", locked_tooltip = "Complete all the activities for the entire course.")
     )
     
     badge_html <- "<p><strong>Your Reflection Badges</strong></p><div class='badge-container'>"
     for (b in badges) {
-      if (reflection_count >= b$threshold) {
-        badge_html <- paste0(
-          badge_html,
-          "<span class='badge-item' data-tooltip='", b$unlocked_tooltip, "'>",
-          "<img src='", b$unlocked_img, "' height='90px'/>",
-          "</span>"
-        )
+      unlocked <- if (!is.null(b$id)) {
+        completed_block_count >= b$threshold
       } else {
-        badge_html <- paste0(
-          badge_html,
-          "<span class='badge-item' data-tooltip='", b$locked_tooltip, "'>",
-          "<img src='QUESTION.png' height='90px'/>",
-          "</span>"
-        )
+        reflection_count >= b$threshold
+      }
+      
+      if (unlocked) {
+        badge_html <- paste0(badge_html, "<span class='badge-item' data-tooltip='", b$unlocked_tooltip, "'><img src='", b$unlocked_img, "' height='90px'/></span>")
+      } else {
+        badge_html <- paste0(badge_html, "<span class='badge-item' data-tooltip='", b$locked_tooltip, "'><img src='QUESTION.png' height='90px'/></span>")
       }
     }
     badge_html <- paste0(badge_html, "</div>")
@@ -1083,6 +1694,10 @@ server <- function(input, output, session) {
       "27974" = "0HV100-2024",
       "Unknown Course"
     ) %>% paste("Self-Regulated Learning Reflection Dashboard")
+  })
+  
+  output$current_week_display <- renderText({
+    paste("Week", weekNumber())
   })
 }
 
