@@ -699,15 +699,27 @@ server <- function(input, output, session) {
     
     if (is.list(user_data) && !is.null(user_data[[course]])) {
       weeks_data <- user_data[[course]]
-      for (week in names(weeks_data)) {
-        week_data <- weeks_data[[week]]
+      for (w in names(weeks_data)) {
+        week_data <- weeks_data[[w]]
         if (!is.null(week_data)) {
-          satisfaction_ratings$data[[course]][[week]] <- week_data$satisfaction %||% NULL
-          expectation_ratings$data[[course]][[week]] <- week_data$expectation %||% NULL
-          satisfaction_feedback_store$data[[course]][[week]] <- week_data$feedback %||% NULL
-          reflection_saved$data[[course]][[week]] <- TRUE
+          satisfaction_ratings$data[[course]][[w]] <- week_data$satisfaction %||% NULL
+          expectation_ratings$data[[course]][[w]] <- week_data$expectation %||% NULL
+          satisfaction_feedback_store$data[[course]][[w]] <- week_data$feedback %||% NULL
+          reflection_saved$data[[course]][[w]] <- TRUE
         }
       }
+    }
+    
+    # Only show feedback if reflection_saved is TRUE for this week
+    if (!is.null(reflection_saved$data[[course]]) &&
+        isTRUE(reflection_saved$data[[course]][[week]]) &&
+        !is.null(satisfaction_feedback_store$data[[course]]) &&
+        !is.null(satisfaction_feedback_store$data[[course]][[week]])) {
+      output$satisfaction_feedback <- renderText({
+        satisfaction_feedback_store$data[[course]][[week]] %||% ""
+      })
+    } else {
+      output$satisfaction_feedback <- renderText({ "" })
     }
   })
   
@@ -911,18 +923,8 @@ server <- function(input, output, session) {
   expectation_ratings <- reactiveValues(data = list())
   satisfaction_feedback_store <- reactiveValues(data = list())
   reflection_saved <- reactiveValues(data = list())
-  save_count <- reactiveValues(count = 0)
+
   current_week <- reactive({ as.numeric(input$selected_week) })
-  weekNumber <- reactive({
-    req(credentials$date) # Make sure login date is available
-    login_date <- as.Date(credentials$date)
-    
-    # Calculate week number
-    num <- as.integer(floor(as.numeric(difftime(login_date, COURSE_START_DATE, units = "days")) / 7)) + 1
-    
-    # Ensure the week is within the 1-10 range of the course
-    min(max(1, num), 10)
-  })
   
   #########################
   # Save / Update Reflection logic
@@ -950,7 +952,6 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$save_rating, {
-    save_count$count <- save_count$count + 1
     course <- selectedCourse()
     this_week <- as.character(weekNumber())
     last_week <- as.character(as.numeric(weekNumber()) - 1)
@@ -967,29 +968,56 @@ server <- function(input, output, session) {
     feedback <- ""
     last_week_expectation <- expectation_ratings$data[[course]][[last_week]]
     
+    # --- Main logic based on satisfaction and expectation ---
+    # 1. 🎯 Categorized Personalized Feedback Based on Satisfaction + Expectation
+    if (input$satisfaction <= 4 && input$expectation <= 4) {
+      feedback <- "🚨 It seems you're struggling and not feeling hopeful. What small change could help you feel more in control next week?"
+    } else if (input$satisfaction <= 4 && input$expectation >= 7) {
+      feedback <- "😟 You're not satisfied, but you're hopeful things can improve. That's a strong mindset! What will you try differently?"
+    } else if (input$satisfaction >= 5 && input$satisfaction <= 6 && input$expectation <= input$satisfaction) {
+      feedback <- "😐 You're maintaining a steady pace, but not seeing much progress. What’s holding you back, and how can you break through?"
+    } else if (input$satisfaction <= 6 && input$expectation > input$satisfaction) {
+      feedback <- "🌱 You're looking to grow! Think about what support, habits, or focus can help you improve next week."
+    } else if (input$satisfaction >= 7 && input$satisfaction <= 8 && input$expectation == input$satisfaction) {
+      feedback <- "👍 You're on a steady path and feeling good about it. Keep doing what works!"
+    } else if (input$satisfaction >= 9 && input$expectation >= 9) {
+      feedback <- "🚀 You're flying high! Excellent work and strong confidence. Reflect on what’s driving your success so you can repeat it."
+    } else {
+      feedback <- "🧭 You're somewhere in between. Take a moment to reflect on what's working and where you can grow."
+    }
+    
+    # 2. ⏮️ Compare to Last Week’s Expectation
     if (!is.null(last_week_expectation)) {
-      if (input$satisfaction > last_week_expectation) {
-        feedback <- "You exceeded your expectations! Great job. What do you think contributed to this?"
-      } else if (input$satisfaction < last_week_expectation) {
-        feedback <- "You didn’t quite meet your expectations. Think about what barriers might have affected your progress."
-      } else {
-        feedback <- "Your satisfaction aligned with your expectations. This suggests a good sense of self-awareness."
+      diff <- input$satisfaction - last_week_expectation
+      if (diff > 0 && input$satisfaction < 6) {
+        feedback <- paste(feedback, "<br><br>📈 You exceeded your expectations, even if satisfaction is still low, that's a step forward. What helped this week?")
+      } else if (diff > 0 && input$satisfaction >= 6) {
+        feedback <- paste(feedback, "<br><br>🎉 You surpassed your expectations! Great progress, reflect on what contributed to that.")
+      } else if (diff == 0 && input$satisfaction < 6) {
+        feedback <- paste(feedback, "<br><br>⚖️ You matched your expectations, but satisfaction remains low. What could lift your experience next week?")
+      } else if (diff == 0 && input$satisfaction >= 6) {
+        feedback <- paste(feedback, "<br><br>🧠 You met your expectations, a great sign of self-awareness. Stay consistent!")
+      } else if (diff < 0 && input$satisfaction < 6) {
+        feedback <- paste(feedback, "<br><br>🚧 You fell short of your expectations and aren't feeling great. What barriers came up? How can you respond differently next time?")
+      } else if (diff < 0 && input$satisfaction >= 6) {
+        feedback <- paste(feedback, "<br><br>🤔 You didn’t meet your goals, but you're still satisfied. Maybe you set your expectations too high? Adjusting goals is also growth.")
       }
     }
     
+    # 3. 🔮 Future Outlook Based on Expectation
     if (input$expectation > input$satisfaction) {
-      feedback <- paste(feedback, "You’re aiming higher for next week. What’s your plan to get there?")
+      feedback <- paste(feedback, "<br><br>📈 You're aiming higher next week, awesome! What’s your action plan to reach that goal?")
     } else if (input$expectation < input$satisfaction) {
-      feedback <- paste(feedback, "It seems you’re not expecting to maintain this level. Is something changing next week?")
+      feedback <- paste(feedback, "<br><br>📉 You’re expecting a dip next week, is something changing? Reflect on how to adapt while keeping your momentum.")
     } else {
-      feedback <- paste(feedback, "You’re expecting similar satisfaction next week. Do you feel you’ve found a stable rhythm?")
+      feedback <- paste(feedback, "<br><br>🔁 You’re aiming for consistency, sounds like you're building a rhythm. What will help you maintain that?")
     }
     
     if (is.null(satisfaction_feedback_store$data[[course]])) {
       satisfaction_feedback_store$data[[course]] <- list()
     }
     satisfaction_feedback_store$data[[course]][[this_week]] <- feedback
-    output$satisfaction_feedback <- renderText({ feedback })
+    output$satisfaction_feedback <- renderUI({HTML(as.character(feedback))})
     
     saveAllUserData(
       user_id = user_id(),
@@ -1059,19 +1087,6 @@ server <- function(input, output, session) {
     return(list())
   }
   
-  # Show saved feedback when week changes
-  observeEvent(input$selected_week, {
-    course <- selectedCourse()
-    week   <- as.character(input$selected_week)
-    
-    # “pluck” the saved feedback if it exists, or “” otherwise
-    feedback <- satisfaction_feedback_store$data[[course]][[week]] %||% ""
-    
-    output$satisfaction_feedback <- renderText({
-      feedback
-    })
-  })
-  
   observeEvent(selectedCourse(), {
     course <- selectedCourse()
     week <- weekNumber()
@@ -1140,97 +1155,137 @@ server <- function(input, output, session) {
       0
     }
     
-    paste("Welcome", user_id_value, "| Date:", date_value, "| Total Active Time:", seconds, "seconds")
+    paste("Welcome", user_id_value, "| Date:", date_value, "| Currently in week:", week, "| Total Active Time:", seconds, "seconds")
   })
   
-  output$activityTracker <- renderUI({
-    req(user_id(), credentials$date)
-    
-    course <- as.character(course_id())
-    user <- credentials$user_id
-    
-    week <- weekNumber()
-    
-    block_start <- (( (week - 1) %/% 2) * 2) + 1
-    block_end <- block_start + 1
-    
-    reflected <- function(week) {
-      isTRUE(reflection_saved$data[[course]][[as.character(week)]])
-    }
-    
-    make_week_activities <- function(week) {
-      quiz_name <- sprintf("Submit Week %d Quiz", week)
-      reflection_name <- sprintf("Reflect on Week %d", week)
-      assignment_name <- sprintf("Submit Week %d Assignment", week)
-      
-      quiz_done <- TRUE
-      assignment_done <- TRUE
-      
-      list(
-        list(name = quiz_name, done = quiz_done),
-        list(name = assignment_name, done = assignment_done),
-        list(name = reflection_name, done = reflected(week))
-      )
-    }
-    
-    all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
-    total <- length(all_activities)
-    completed <- sum(sapply(all_activities, function(x) x$done))
-    percent <- if (total > 0) round((completed / total) * 100) else 0
-    completion <- 0
-    block <- as.character(block_start)
-    
-    if (percent == 100) {
-      completion <- 1
-      if (is.null(activity_completion$data[[course]])) {
-        activity_completion$data[[course]] <- list()
-      }
-      activity_completion$data[[course]][[block]] <- TRUE
-      saveActivityCompletion(user_id(), course, block, TRUE)
-    } else if (completion == 1) {
-      completion <- 0
-      isolate({ activity_completion$data[[course]][[block]] <- NULL })
-      file_path <- "activity_completion_data.json"
-      if (file.exists(file_path)) {
-        data <- jsonlite::read_json(file_path, simplifyVector = FALSE)
-        if (!is.null(data[[user]][[course]][[block]])) {
-          data[[user]][[course]][[block]] <- NULL
-          if (length(data[[user]][[course]]) == 0) data[[user]][[course]] <- NULL
-          if (length(data[[user]]) == 0) data[[user]] <- NULL
-          jsonlite::write_json(data, file_path, pretty = TRUE, auto_unbox = TRUE)
-        }
-      }
-    } else {
-      activity_completion$data[[course]][[block]] <- FALSE
-    }
-    
-    # Feedback generation logic
-    activity_feedback_text <- ""
-    if (completed == total && total > 0) {
-      activity_feedback_text <- "Great job! You've completed all activities for this block. 🎉"
-    } else if (completed > 0) {
-      activity_feedback_text <- "Excellent! You've checked another activity off the list. Keep the momentum going! 💪"
-    } else {
-      activity_feedback_text <- "It looks like you're just getting started! For a good overview, perhaps look at the activity breakdown to see where you can best invest your time. 🗺️"
-    }
-    feedback_html <- sprintf("<div class='alert alert-info mt-3' role='alert'>%s</div>", activity_feedback_text)
-    
-    list_items <- paste0(
-      "<ul class='list-group mb-3'>",
-      paste(sapply(all_activities, function(x) {
-        if (x$done) {
-          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-success'>✅ %s</li>", x$name)
-        } else {
-          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-muted'>⬜ %s</li>", x$name)
-        }
-      }), collapse = ""),
-      "</ul>"
+output$activityTracker <- renderUI({
+  req(user_id(), credentials$date)
+
+  course <- as.character(course_id())
+  user <- user_id()
+  week <- weekNumber()
+  
+  # Two-week block logic (1–2, 3–4, etc.)
+  block_start <- (((week - 1) %/% 2) * 2) + 1
+  block_end <- block_start + 1
+  block <- as.character(block_start)
+  
+  # Timestamp helper
+  get_week_timestamps <- function(week_num, course_start_date) {
+    start_of_week <- course_start_date + (7 * (week_num - 1))
+    end_of_week <- start_of_week + 7
+    list(
+      start_time = paste0(start_of_week, " 00:00:00.000"),
+      end_time = paste0(end_of_week, " 00:00:00.000")
     )
-    
-    progress_bar <- sprintf("<div class='progress'><div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>%d%%</div></div>", percent, percent, percent)
-    
-    HTML(paste0(list_items, progress_bar, feedback_html))
-  })
+  }
+
+  # DB check helpers
+  is_quiz_submitted <- function(user_id, start_time, end_time, db_con) {
+    query <- sprintf("
+      SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
+      WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'complete') AND 
+      finished_at_anonymous >= '%s' AND finished_at_anonymous < '%s';",
+      user_id, start_time, end_time
+    )
+    result <- tryCatch({
+      dbGetQuery(db_con, query)
+    }, error = function(e) {
+      cat("Error querying quiz subs:", e$message, "\n")
+      data.frame(submitted = FALSE)
+    })
+    if (nrow(result) > 0) result$submitted[1] else FALSE
+  }
+
+  is_assignment_submitted <- function(user_id, start_time, end_time, db_con) {
+    query <- sprintf("
+      SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_submissions
+      WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'graded', 'submitted') AND 
+      submitted_at_anonymous >= '%s' AND submitted_at_anonymous < '%s';",
+      user_id, start_time, end_time
+    )
+    result <- tryCatch({
+      dbGetQuery(db_con, query)
+    }, error = function(e) {
+      cat("Error querying assignment subs:", e$message, "\n")
+      data.frame(submitted = FALSE)
+    })
+    if (nrow(result) > 0) result$submitted[1] else FALSE
+  }
+
+  reflected <- function(week_num) {
+    isTRUE(reflection_saved$data[[course]][[as.character(week_num)]])
+  }
+
+  make_week_activities <- function(week_num) {
+    timestamps <- get_week_timestamps(week_num, COURSE_START_DATE)
+    quiz_done <- is_quiz_submitted(user, timestamps$start_time, timestamps$end_time, sc)
+    assignment_done <- is_assignment_submitted(user, timestamps$start_time, timestamps$end_time, sc)
+    list(
+      list(name = sprintf("Submit Week %d Quiz", week_num), done = quiz_done),
+      list(name = sprintf("Submit Week %d Assignment", week_num), done = assignment_done),
+      list(name = sprintf("Reflect on Week %d", week_num), done = reflected(week_num))
+    )
+  }
+
+  # Build activity list
+  all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
+  total <- length(all_activities)
+  completed <- sum(sapply(all_activities, function(x) x$done))
+  percent <- if (total > 0) round((completed / total) * 100) else 0
+
+  # Completion tracking logic
+  completion <- 0
+  if (percent == 100) {
+    completion <- 1
+    if (is.null(activity_completion$data[[course]])) {
+      activity_completion$data[[course]] <- list()
+    }
+    activity_completion$data[[course]][[block]] <- TRUE
+    saveActivityCompletion(user_id(), course, block, TRUE)
+  } else if (completion == 1) {
+    completion <- 0
+    isolate({ activity_completion$data[[course]][[block]] <- NULL })
+    file_path <- "activity_completion_data.json"
+    if (file.exists(file_path)) {
+      data <- jsonlite::read_json(file_path, simplifyVector = FALSE)
+      if (!is.null(data[[user]][[course]][[block]])) {
+        data[[user]][[course]][[block]] <- NULL
+        if (length(data[[user]][[course]]) == 0) data[[user]][[course]] <- NULL
+        if (length(data[[user]]) == 0) data[[user]] <- NULL
+        jsonlite::write_json(data, file_path, pretty = TRUE, auto_unbox = TRUE)
+      }
+    }
+  } else {
+    activity_completion$data[[course]][[block]] <- FALSE
+  }
+
+  # Feedback text
+  activity_feedback_text <- if (completed == total && total > 0) {
+    "Great job! You've completed all activities for this block. 🎉"
+  } else if (completed > 0) {
+    "Excellent! You've checked another activity off the list. Keep the momentum going! 💪"
+  } else {
+    "It looks like you're just getting started! For a good overview, perhaps look at the activity breakdown to see where you can best invest your time. 🗺️"
+  }
+  feedback_html <- sprintf("<div class='alert alert-info mt-3' role='alert'>%s</div>", activity_feedback_text)
+
+  # UI generation
+  list_items <- paste0(
+    "<ul class='list-group mb-3'>",
+    paste(sapply(all_activities, function(x) {
+      if (x$done) {
+        sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-success'>✅ %s</li>", x$name)
+      } else {
+        sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-muted'>⬜ %s</li>", x$name)
+      }
+    }), collapse = ""), "</ul>"
+  )
+  progress_bar <- sprintf("<div class='progress'><div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>%d%%</div></div>", percent, percent, percent)
+
+  HTML(paste0(list_items, progress_bar, feedback_html))
+})
+
   
   # ----------------------------
   # Dynamic Metric Selector UI
