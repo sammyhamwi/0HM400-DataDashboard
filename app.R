@@ -753,12 +753,12 @@ server <- function(input, output, session) {
                 # right‐side controls
                 div(class = "d-flex align-items-stretch", style = "gap:0.5rem;",
                     # date picker: make its wrapper a flex box
-                    div(class = "shiny-date-input d-flex align-items-center", 
-                        dateInput("date_input", NULL,
-                                  value  = credentials$date,
-                                  format = "yyyy-mm-dd",
-                                  width  = "120px")
-                    ),
+                    #div(class = "shiny-date-input d-flex align-items-center", 
+                    #    dateInput("date_input hidde", NULL,
+                    #              value  = credentials$date,
+                    #              format = "yyyy-mm-dd",
+                    #              width  = "120px")
+                    #),
                     # logout button: also flex + center
                     actionButton("logout_button", "Logout",
                                  class = "btn btn-logout d-flex align-items-center justify-content-center")
@@ -923,7 +923,7 @@ server <- function(input, output, session) {
   expectation_ratings <- reactiveValues(data = list())
   satisfaction_feedback_store <- reactiveValues(data = list())
   reflection_saved <- reactiveValues(data = list())
-
+  
   current_week <- reactive({ as.numeric(input$selected_week) })
   
   #########################
@@ -1157,134 +1157,134 @@ server <- function(input, output, session) {
     paste("Welcome", user_id_value, "| Date:", date_value, "| Currently in week:", week, "| Total Active Time:", seconds, "seconds")
   })
   
-output$activityTracker <- renderUI({
-  req(user_id(), credentials$date)
-
-  course <- as.character(course_id())
-  user <- user_id()
-  week <- weekNumber()
-  
-  # Two-week block logic (1–2, 3–4, etc.)
-  block_start <- (((week - 1) %/% 2) * 2) + 1
-  block_end <- block_start + 1
-  block <- as.character(block_start)
-  
-  # Timestamp helper
-  get_week_timestamps <- function(week_num, course_start_date) {
-    start_of_week <- course_start_date + (7 * (week_num - 1))
-    end_of_week <- start_of_week + 7
-    list(
-      start_time = paste0(start_of_week, " 00:00:00.000"),
-      end_time = paste0(end_of_week, " 00:00:00.000")
-    )
-  }
-
-  # DB check helpers
-  is_quiz_submitted <- function(user_id, start_time, end_time, db_con) {
-    query <- sprintf("
+  output$activityTracker <- renderUI({
+    req(user_id(), credentials$date)
+    
+    course <- as.character(course_id())
+    user <- user_id()
+    week <- weekNumber()
+    
+    # Two-week block logic (1–2, 3–4, etc.)
+    block_start <- (((week - 1) %/% 2) * 2) + 1
+    block_end <- block_start + 1
+    block <- as.character(block_start)
+    
+    # Timestamp helper
+    get_week_timestamps <- function(week_num, course_start_date) {
+      start_of_week <- course_start_date + (7 * (week_num - 1))
+      end_of_week <- start_of_week + 7
+      list(
+        start_time = paste0(start_of_week, " 00:00:00.000"),
+        end_time = paste0(end_of_week, " 00:00:00.000")
+      )
+    }
+    
+    # DB check helpers
+    is_quiz_submitted <- function(user_id, start_time, end_time, db_con) {
+      query <- sprintf("
       SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
       WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'complete') AND 
       finished_at_anonymous >= '%s' AND finished_at_anonymous < '%s';",
-      user_id, start_time, end_time
-    )
-    result <- tryCatch({
-      dbGetQuery(db_con, query)
-    }, error = function(e) {
-      cat("Error querying quiz subs:", e$message, "\n")
-      data.frame(submitted = FALSE)
-    })
-    if (nrow(result) > 0) result$submitted[1] else FALSE
-  }
-
-  is_assignment_submitted <- function(user_id, start_time, end_time, db_con) {
-    query <- sprintf("
+                       user_id, start_time, end_time
+      )
+      result <- tryCatch({
+        dbGetQuery(db_con, query)
+      }, error = function(e) {
+        cat("Error querying quiz subs:", e$message, "\n")
+        data.frame(submitted = FALSE)
+      })
+      if (nrow(result) > 0) result$submitted[1] else FALSE
+    }
+    
+    is_assignment_submitted <- function(user_id, start_time, end_time, db_con) {
+      query <- sprintf("
       SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_submissions
       WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'graded', 'submitted') AND 
       submitted_at_anonymous >= '%s' AND submitted_at_anonymous < '%s';",
-      user_id, start_time, end_time
-    )
-    result <- tryCatch({
-      dbGetQuery(db_con, query)
-    }, error = function(e) {
-      cat("Error querying assignment subs:", e$message, "\n")
-      data.frame(submitted = FALSE)
-    })
-    if (nrow(result) > 0) result$submitted[1] else FALSE
-  }
-
-  reflected <- function(week_num) {
-    isTRUE(reflection_saved$data[[course]][[as.character(week_num)]])
-  }
-
-  make_week_activities <- function(week_num) {
-    timestamps <- get_week_timestamps(week_num, COURSE_START_DATE)
-    quiz_done <- is_quiz_submitted(user, timestamps$start_time, timestamps$end_time, sc)
-    assignment_done <- is_assignment_submitted(user, timestamps$start_time, timestamps$end_time, sc)
-    list(
-      list(name = sprintf("Submit Week %d Quiz", week_num), done = quiz_done),
-      list(name = sprintf("Submit Week %d Assignment", week_num), done = assignment_done),
-      list(name = sprintf("Reflect on Week %d", week_num), done = reflected(week_num))
-    )
-  }
-
-  # Build activity list
-  all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
-  total <- length(all_activities)
-  completed <- sum(sapply(all_activities, function(x) x$done))
-  percent <- if (total > 0) round((completed / total) * 100) else 0
-
-  # Completion tracking logic
-  completion <- 0
-  if (percent == 100) {
-    completion <- 1
-    if (is.null(activity_completion$data[[course]])) {
-      activity_completion$data[[course]] <- list()
+                       user_id, start_time, end_time
+      )
+      result <- tryCatch({
+        dbGetQuery(db_con, query)
+      }, error = function(e) {
+        cat("Error querying assignment subs:", e$message, "\n")
+        data.frame(submitted = FALSE)
+      })
+      if (nrow(result) > 0) result$submitted[1] else FALSE
     }
-    activity_completion$data[[course]][[block]] <- TRUE
-    saveActivityCompletion(user_id(), course, block, TRUE)
-  } else if (completion == 1) {
+    
+    reflected <- function(week_num) {
+      isTRUE(reflection_saved$data[[course]][[as.character(week_num)]])
+    }
+    
+    make_week_activities <- function(week_num) {
+      timestamps <- get_week_timestamps(week_num, COURSE_START_DATE)
+      quiz_done <- is_quiz_submitted(user, timestamps$start_time, timestamps$end_time, sc)
+      assignment_done <- is_assignment_submitted(user, timestamps$start_time, timestamps$end_time, sc)
+      list(
+        list(name = sprintf("Submit Week %d Quiz", week_num), done = quiz_done),
+        list(name = sprintf("Submit Week %d Assignment", week_num), done = assignment_done),
+        list(name = sprintf("Reflect on Week %d", week_num), done = reflected(week_num))
+      )
+    }
+    
+    # Build activity list
+    all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
+    total <- length(all_activities)
+    completed <- sum(sapply(all_activities, function(x) x$done))
+    percent <- if (total > 0) round((completed / total) * 100) else 0
+    
+    # Completion tracking logic
     completion <- 0
-    isolate({ activity_completion$data[[course]][[block]] <- NULL })
-    file_path <- "activity_completion_data.json"
-    if (file.exists(file_path)) {
-      data <- jsonlite::read_json(file_path, simplifyVector = FALSE)
-      if (!is.null(data[[user]][[course]][[block]])) {
-        data[[user]][[course]][[block]] <- NULL
-        if (length(data[[user]][[course]]) == 0) data[[user]][[course]] <- NULL
-        if (length(data[[user]]) == 0) data[[user]] <- NULL
-        jsonlite::write_json(data, file_path, pretty = TRUE, auto_unbox = TRUE)
+    if (percent == 100) {
+      completion <- 1
+      if (is.null(activity_completion$data[[course]])) {
+        activity_completion$data[[course]] <- list()
       }
+      activity_completion$data[[course]][[block]] <- TRUE
+      saveActivityCompletion(user_id(), course, block, TRUE)
+    } else if (completion == 1) {
+      completion <- 0
+      isolate({ activity_completion$data[[course]][[block]] <- NULL })
+      file_path <- "activity_completion_data.json"
+      if (file.exists(file_path)) {
+        data <- jsonlite::read_json(file_path, simplifyVector = FALSE)
+        if (!is.null(data[[user]][[course]][[block]])) {
+          data[[user]][[course]][[block]] <- NULL
+          if (length(data[[user]][[course]]) == 0) data[[user]][[course]] <- NULL
+          if (length(data[[user]]) == 0) data[[user]] <- NULL
+          jsonlite::write_json(data, file_path, pretty = TRUE, auto_unbox = TRUE)
+        }
+      }
+    } else {
+      activity_completion$data[[course]][[block]] <- FALSE
     }
-  } else {
-    activity_completion$data[[course]][[block]] <- FALSE
-  }
-
-  # Feedback text
-  activity_feedback_text <- if (completed == total && total > 0) {
-    "Great job! You've completed all activities for this block. 🎉"
-  } else if (completed > 0) {
-    "Excellent! You've checked another activity off the list. Keep the momentum going! 💪"
-  } else {
-    "It looks like you're just getting started! For a good overview, perhaps look at the activity breakdown to see where you can best invest your time. 🗺️"
-  }
-  feedback_html <- sprintf("<div class='alert alert-info mt-3' role='alert'>%s</div>", activity_feedback_text)
-
-  # UI generation
-  list_items <- paste0(
-    "<ul class='list-group mb-3'>",
-    paste(sapply(all_activities, function(x) {
-      if (x$done) {
-        sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-success'>✅ %s</li>", x$name)
-      } else {
-        sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-muted'>⬜ %s</li>", x$name)
-      }
-    }), collapse = ""), "</ul>"
-  )
-  progress_bar <- sprintf("<div class='progress'><div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>%d%%</div></div>", percent, percent, percent)
-
-  HTML(paste0(list_items, progress_bar, feedback_html))
-})
-
+    
+    # Feedback text
+    activity_feedback_text <- if (completed == total && total > 0) {
+      "Great job! You've completed all activities for this block. 🎉"
+    } else if (completed > 0) {
+      "Excellent! You've checked another activity off the list. Keep the momentum going! 💪"
+    } else {
+      "It looks like you're just getting started! For a good overview, perhaps look at the activity breakdown to see where you can best invest your time. 🗺️"
+    }
+    feedback_html <- sprintf("<div class='alert alert-info mt-3' role='alert'>%s</div>", activity_feedback_text)
+    
+    # UI generation
+    list_items <- paste0(
+      "<ul class='list-group mb-3'>",
+      paste(sapply(all_activities, function(x) {
+        if (x$done) {
+          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-success'>✅ %s</li>", x$name)
+        } else {
+          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-muted'>⬜ %s</li>", x$name)
+        }
+      }), collapse = ""), "</ul>"
+    )
+    progress_bar <- sprintf("<div class='progress'><div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>%d%%</div></div>", percent, percent, percent)
+    
+    HTML(paste0(list_items, progress_bar, feedback_html))
+  })
+  
   
   # ----------------------------
   # Dynamic Metric Selector UI
