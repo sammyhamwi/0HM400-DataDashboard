@@ -88,7 +88,7 @@ ui <- fluidPage(
         top: 3.5rem; /* stick just below header */
       }
       .sidebar .theme-selector {
-        margin-top: 60rem !important;
+        margin-top: 10rem !important;
       }
       .sidebar h5 {
         margin-bottom: 1.5rem;
