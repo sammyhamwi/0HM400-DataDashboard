@@ -1062,15 +1062,14 @@ server <- function(input, output, session) {
   # Show saved feedback when week changes
   observeEvent(input$selected_week, {
     course <- selectedCourse()
-    week <- as.character(input$selected_week)
-    if (!is.null(satisfaction_feedback_store$data[[course]]) &&
-        !is.null(satisfaction_feedback_store$data[[course]][[week]])) {
-      output$satisfaction_feedback <- renderText({
-        satisfaction_feedback_store$data[[course]][[week]] %||% ""
-      })
-    } else {
-      output$satisfaction_feedback <- renderText({ "" })
-    }
+    week   <- as.character(input$selected_week)
+    
+    # “pluck” the saved feedback if it exists, or “” otherwise
+    feedback <- satisfaction_feedback_store$data[[course]][[week]] %||% ""
+    
+    output$satisfaction_feedback <- renderText({
+      feedback
+    })
   })
   
   observeEvent(selectedCourse(), {
@@ -1271,6 +1270,7 @@ server <- function(input, output, session) {
       input$data_type
       input$date_range
       input$metric
+      selectedCourse()
     },
     {
       req(input$data_type, input$date_range, input$metric)
