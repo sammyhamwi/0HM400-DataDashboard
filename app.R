@@ -155,6 +155,7 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
+  show_optional_text <- reactiveVal(FALSE)
   sidebar_collapsed <- reactiveVal(FALSE)
   activity_completion <- reactiveValues(data = list())
   credentials <- reactiveValues(logged_in = FALSE, user_id = NULL, date = NULL)
@@ -279,8 +280,10 @@ server <- function(input, output, session) {
       output$satisfaction_feedback <- renderText({
         satisfaction_feedback_store$data[[course]][[week]] %||% ""
       })
+      show_optional_text(TRUE)
     } else {
       output$satisfaction_feedback <- renderText({ "" })
+      show_optional_text(FALSE)
     }
   })
   
@@ -432,6 +435,7 @@ server <- function(input, output, session) {
     course <- selectedCourse()
     this_week <- as.character(weekNumber())
     last_week <- as.character(as.numeric(weekNumber()) - 1)
+    show_optional_text(TRUE)
     
     if (is.null(satisfaction_ratings$data[[course]])) satisfaction_ratings$data[[course]] <- list()
     if (is.null(expectation_ratings$data[[course]])) expectation_ratings$data[[course]] <- list()
@@ -507,6 +511,7 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$refresh_rating, ignoreInit = TRUE, {
+    show_optional_text(FALSE)
     course <- selectedCourse()
     week <- as.character(weekNumber())
     user <- credentials$user_id
@@ -1081,36 +1086,37 @@ server <- function(input, output, session) {
     saved  <- isTRUE(reflection_saved$data[[course]][[wk]])
     
     tags$script(HTML("
-      $(function() {
-        ['satisfaction', 'expectation'].forEach(function(id) {
-          var $inp = $('#' + id);
-    
-          function updateLabel() {
-            var single = $inp.closest('.slider-with-value').find('.irs-single');
-            if (single.length) {
-              single.text($inp.val());
-            }
+    $(function() {
+      ['satisfaction', 'expectation'].forEach(function(id) {
+        var $inp = $('#' + id);
+
+        function updateLabel() {
+          var single = $inp.closest('.slider-with-value').find('.irs-single');
+          if (single.length) {
+            single.text($inp.val());
           }
-    
-          $inp.on('input change', updateLabel);
-          setTimeout(updateLabel, 100); // wait for ion.rangeSlider to init
-        });
+        }
+
+        $inp.on('input change', updateLabel);
+        setTimeout(updateLabel, 100); // wait for ion.rangeSlider to init
       });
-    "))
+    });
+  "))
     
-    # Week label
-    week_label <- div(class = "mb-4 py-2",
-                      div(class = "h6", paste("Week", weekNumber())))
+    # Motivation Reflection
+    motivation_reflection <- div(class = "mb-3 pb-2",
+                                 div(class = "fw-semibold",
+                                     "Fill out your reflection for this week to better understand your progress and earn your badges.")
+    )
     
     # Satisfaction
     sat_ui <- if (saved) {
-      div(class = "mb-4 py-2",
-          div(class = "p", paste(
-            "Self-Reported Satisfaction Score:",
-            satisfaction_ratings$data[[course]][[wk]]
-          )))
+      div(class = "mb-3 pb-2",
+          div(class = "fw-bold mb-1", "Self-Reported Satisfaction Score:"),
+          div(class = "text-muted", satisfaction_ratings$data[[course]][[wk]])
+      )
     } else {
-      div(class = "mb-4 py-2 slider-with-value",
+      div(class = "mb-3 pb-2 slider-with-value",
           sliderInput(
             "satisfaction",
             "How satisfied are you with your learning progress this week?",
@@ -1121,12 +1127,12 @@ server <- function(input, output, session) {
     
     # Expectation
     exp_ui <- if (saved) {
-      div(class = "mb-4 py-2",
-          div(class = "p", 
-              paste("Expected Progress Satisfaction:",
-                    expectation_ratings$data[[course]][[wk]])))
+      div(class = "mb-3 pb-2",
+          div(class = "fw-bold mb-1", "Expected Progress Satisfaction:"),
+          div(class = "text-muted", expectation_ratings$data[[course]][[wk]])
+      )
     } else {
-      div(class = "mb-4 py-2 slider-with-value",
+      div(class = "mb-3 pb-2 slider-with-value",
           sliderInput(
             "expectation",
             "How satisfied do you expect to be next week?",
@@ -1136,17 +1142,16 @@ server <- function(input, output, session) {
     }
     
     # Save/Update button
-    btn_ui <- div(class = "d-grid gap-2 mb-4 py-2",
+    btn_ui <- div(class = "d-grid gap-2 mb-3 pb-2",
                   if (!saved) {
-                    actionButton("save_rating", "Save Reflection",
-                                 class = "btn btn-primary")
+                    actionButton("save_rating", "Save Reflection", class = "btn btn-primary")
                   } else {
-                    actionButton("refresh_rating", "Update Reflection",
-                                 class = "btn btn-outline-primary")
-                  })
+                    actionButton("refresh_rating", "Update Reflection", class = "btn btn-outline-primary")
+                  }
+    )
     
     # Feedback
-    fb_ui <- div(class = "mb-4 py-2", uiOutput("satisfaction_feedback"))
+    fb_ui <- div(class = "mb-3 pb-2", uiOutput("satisfaction_feedback"))
     
     # Streak badge
     streak_ui <- {
@@ -1157,19 +1162,30 @@ server <- function(input, output, session) {
         if (w %in% submitted) streak <- streak + 1L else break
       }
       if (streak >= 2L) {
-        div(class = "alert alert-warning mb-4 py-2",
+        div(class = "alert alert-warning mb-3 pb-2",
             HTML(sprintf("🏅 <strong>%d-Week Streak!</strong> Reflection badge for %d weeks.", streak, streak))
         )
       } else NULL
     }
     
+    # Optional free-text reflection
+    optional_text_ui <- {
+      if (show_optional_text()) {
+        div(class = "mb-3",
+            tags$label("Optional: You can elaborate on your reflection here if you'd like."),
+            textAreaInput("optional_reflection_text", label = NULL, rows = 4, width = "100%")
+        )
+      }
+    }
+    
     tagList(
-      week_label,
+      motivation_reflection,
       sat_ui,
       exp_ui,
       btn_ui,
       fb_ui,
-      streak_ui
+      streak_ui,
+      optional_text_ui
     )
   })
   
@@ -1198,7 +1214,7 @@ server <- function(input, output, session) {
       list(id = "kingofwisdom", threshold = 4, unlocked_img = "img/KING.png", unlocked_tooltip = "You have complete all the activities for this course - Amazing!", locked_tooltip = "Complete all the activities for the entire course.")
     )
     
-    badge_html <- "<p><strong>Your Reflection Badges</strong></p><div class='badge-container'>"
+    badge_html <- "<p><strong>Your Reflection Badges, hover over them to see how you can earn them</strong></p><div class='badge-container'>"
     for (b in badges) {
       unlocked <- if (!is.null(b$id)) {
         completed_block_count >= b$threshold
@@ -1226,11 +1242,15 @@ server <- function(input, output, session) {
       "27893" = "0HV90-2024",
       "27974" = "0HV100-2024",
       "Unknown Course"
-    ) %>% paste("<br/>Self-Regulated Learning Reflection Dashboard")
+    ) %>% paste("- Self-Regulated Learning Reflection Dashboard")
   })
   
   output$current_week_display <- renderText({
     paste("Week", weekNumber())
+  })
+  
+  output$motivation_reflection <- renderText({
+    paste("Fill out your reflection for this week to better understand your progress and earn your badges.")
   })
 }
 
