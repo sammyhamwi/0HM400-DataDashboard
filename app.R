@@ -4,617 +4,162 @@ library(jsonlite)
 library(shiny)
 library(shinyjs)
 library(dplyr)
+library(dbplyr)
 library(DBI)
 library(ggplot2)
 library(plotly)
 library(tidyr)
+library(shinycssloaders)
 
 ui <- fluidPage(
   useShinyjs(),
   tags$head(
-    # Bootstrap CSS
-    tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"),
-    tags$style(HTML("
-      /* Page background and font */
-      body {
-        background-color: #F0F2F5;
-        font-family: system-ui;
-      }
-      
-      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
-      /* Smooth theme‐color transitions on background, text & borders */
-      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
-      body,
-      html,
-      .header-banner,
-      .sidebar,
-      .card,
-      .section-title,
-      .list-group-item,
-      .btn,
-      .btn-outline-primary,
-      input,
-      select,
-      .input-group-text {
-        transition: 
-          background-color 0.4s ease,
-          color            0.4s ease,
-          border-color     0.4s ease;
-      }
-
-      /* Header banner: gradient from dark slate to blue */
-      .header-banner {
-        background: linear-gradient(90deg, #2C3E50, #2980B9);
-        color: white;
-        padding: 1rem 2rem;
-        margin-bottom: 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-radius: 0;
-      }
-      .header-banner h3 {
-        margin: 0;
-        font-size: 1.75rem;
-        font-weight: 600;
-      }
-      .header-banner .btn-logout {
-        background-color: #FFC7C7 !important;
-        border-color:     #FFA3A3 !important;
-        color:            #800000 !important;
-      }
-      .header-banner .btn-logout:hover {
-        background-color: #FFA3A3 !important;
-        border-color:     #FF8A8A !important;
-        color:            #660000 !important;
-      }
-      .header-banner .shiny-date-input {
-        margin: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-      }
-      .header-banner .btn-logout {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-      }
-
-      /* Sidebar styling as vertical nav */
-      .sidebar {
-        background-color: #2C3E50;
-        height: calc(100vh - 3.5rem); /* subtract header height (~3.5rem) */
-        padding: 2rem 1rem;
-        position: sticky;
-        top: 3.5rem; /* stick just below header */
-      }
-      .sidebar .theme-selector {
-        margin-top: 10rem !important;
-      }
-      .sidebar h5 {
-        margin-bottom: 1.5rem;
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #ECF0F1;
-        text-align: center;
-      }
-      .sidebar .list-group-item {
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-        font-weight: 500;
-        color: #ECF0F1;
-        background-color: #34495E;
-        border: 1px solid #1A252F;
-      }
-      .sidebar .list-group-item.active {
-        background-color: #E67E22;
-        color: white;
-        border-color: #E67E22;
-      }
-      .sidebar .list-group-item:hover {
-        background-color: #2980B9;
-        color: white;
-        cursor: pointer;
-        border-color: #2980B9;
-      }
-      .sidebar .list-group-item.active:hover {
-        background-color: #E67E22 !important;
-        color: white !important;
-      }
-
-      /* Main content area */
-      .main-content {
-        padding: 1.5rem 2rem 1rem 2rem;
-      }
-
-      /* Card styling */
-      .card {
-        background-color: white;
-        border-radius: 1rem;
-        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
-        margin-bottom: 1.5rem;
-        overflow: visible !important;
-        position: relative;
-        border-left: 5px solid #2980B9;  /* blue accent on left */
-      }
-      .section-title {
-        font-weight: 600;
-        font-size: 1.2rem;
-        margin-bottom: 0.75rem;
-        color: #E67E22;  /* orange accent */
-      }
-
-      /* Login card centered */
-      .login-card {
-        max-width: 400px;
-        margin: 10% auto;
-        padding: 2rem;
-        border-radius: 1rem;
-        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
-        background-color: white;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-      .login-card .shiny-input-container {
-        width: 100%;
-        max-width: 300px;
-        margin-bottom: 1rem;
-      }
-      .login-card .btn {
-        width: 100%;
-        max-width: 300px;
-        margin-top: 1rem;
-        background-color: #E67E22;
-        border-color: #E67E22;
-      }
-      .login-card .btn:hover {
-        background-color: #2980B9;
-        border-color: #2980B9;
-      }
-
-      /* Hide Shiny slider ticks */
-      .irs-grid-text,
-      .irs-min, .irs-max {
-        display: none !important;
-      }
-      .irs--shiny .irs-grid {
-        display: none !important;
-      }
-
-      /* Badge container styling */
-      .badge-container {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 30px;
-        justify-items: center;
-        padding: 1rem 0;
-        transition: all 0.3s ease;
-      }
-      .badge-item {
-        position: relative;
-        cursor: pointer;
-      }
-      .badge-item:hover::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: 110%;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: rgba(0, 0, 0, 0.75);
-        color: #fff;
-        padding: 6px 10px;
-        border-radius: 6px;
-        white-space: nowrap;
-        font-size: 14px;
-        pointer-events: none;
-        opacity: 1;
-        transition: opacity 0.3s ease;
-        z-index: 1000;
-      }
-      .badge-item::after {
-        content: '';
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-      }
-      /* Ensure cards don’t clip badge tooltips */
-      .card,
-      .col-md-6,
-      .col-md-9,
-      .row {
-        overflow: visible !important;
-        position: relative;
-      }
-
-      /* Button overrides for Save/Update and Logout */
-      .btn-primary {
-        background-color: #E67E22;
-        border-color: #E67E22;
-      }
-      .btn-primary:hover {
-        background-color: #2980B9;
-        border-color: #2980B9;
-      }
-      .btn-outline-primary {
-        color: #E67E22;
-        border-color: #E67E22;
-      }
-      .btn-outline-primary:hover {
-        background-color: #E67E22;
-        color: white;
-      }
-
-      /* Progress bar accent */
-      .progress-bar {
-        background-color: #2ECC71 !important;
-      }
-      /* Activity Tracker list items */
-      .list-group-item.text-success {
-        background-color: #DFF0D8 !important;  /* light green */
-        color: #2C3E50 !important;             /* dark slate */
-      }
-      .list-group-item.text-muted {
-        background-color: #FDEDEC !important;  /* light red */
-        color: #C0392B !important;             /* dark red */
-      }
-      
-      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
-      /* Theme palettes — each prefix will be added as html.theme-<name> */
-      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
-      
-      /* DEFAULT (no changes) */
-      html.theme-default {}
-      
-      /* LIGHT: very light backgrounds, blue accents */
-      html.theme-light {
-        background-color: #FFFFFF !important;
-        color:            #2C3E50  !important;
-      }
-      html.theme-light body {
-        background-color: #FFFFFF !important;
-      }
-      html.theme-light .sidebar {
-        background-color: #F0F0F0 !important;
-      }
-      html.theme-light .card {
-        border-left-color: #2980B9 !important;
-      }
-      html.theme-light .header-banner {
-        background: linear-gradient(90deg, #F0F0F0, #F0F0F1) !important;
-        color:      #2C3E50 !important;
-      }
-      html.theme-light .section-title {
-        color: #2980B9 !important;
-      }
-      html.theme-light .sidebar .list-group-item {
-        background-color: #F8F9FA !important;
-        color:            #2C3E50  !important;
-        border-color:     #D0D0D0  !important;
-      }
-      html.theme-light .sidebar .list-group-item.active {
-        background-color: #2980B9 !important;
-        color:            #FFFFFF !important;
-        border-color:     #2980B9 !important;
-      }
-      html.theme-light .sidebar .list-group-item:hover {
-        background-color: #E0E0E0 !important;
-        color:            #2C3E50  !important;
-      }
-      /* ========== BUTTONS ========== */
-      html.theme-light .btn-primary {
-        background-color: #2980B9 !important;
-        border-color:     #2980B9 !important;
-        color:            #FFFFFF !important;
-      }
-      html.theme-light .btn-primary:hover {
-        background-color: #2C3E50 !important;
-        border-color:     #2C3E50 !important;
-      }
-      html.theme-light .btn-outline-primary {
-        color:         #2980B9 !important;
-        border-color:  #2980B9 !important;
-      }
-      html.theme-light .btn-outline-primary:hover {
-        background-color: #2980B9 !important;
-        color:            #FFFFFF !important;
-      }
-      /* ========== INPUTS & DROPDOWNS ========== */
-      html.theme-light input,
-      html.theme-light select,
-      html.theme-light textarea {
-        background-color: #FFFFFF !important;
-        color:            #2C3E50  !important;
-        border-color:     #D0D0D0  !important;
-      }
-      html.theme-light .selectize-input,
-      html.theme-light .selectize-dropdown {
-        background-color: #FFFFFF !important;
-        color:            #2C3E50  !important;
-        border-color:     #D0D0D0  !important;
-      }
-      /* ========== DATE-RANGE “to” ADDON ========== */
-      html.theme-light .input-group-addon,
-      html.theme-light .input-group-text {
-        background-color: #FFFFFF !important;
-        color:            #2C3E50  !important;
-        border-color:     #D0D0D0  !important;
-      }
-      
-      
-      /* DARK: charcoal backgrounds, orange accents */
-      html.theme-dark {
-        background-color: #2C2C2C !important;
-        color:            #EEEEEE !important;
-      }
-      html.theme-dark body {
-        background-color: #2C2C2C !important;
-      }
-      html.theme-dark .sidebar {
-        background-color: #3A3A3A !important;
-      }
-      html.theme-dark .card {
-        background-color:  #3A3A3A !important;
-        border-left-color:  #E67E22 !important;
-        color:             #EEEEEE  !important;
-      }
-      html.theme-dark .header-banner {
-        background: linear-gradient(90deg, #1A1A1A, #333333) !important;
-        color:      #E67E22 !important;
-      }
-      html.theme-dark .section-title {
-        color: #E67E22 !important;
-      }
-      html.theme-dark .sidebar .list-group-item {
-        background-color: #3A3A3A !important;
-        color:            #EEEEEE  !important;
-        border-color:     #444444  !important;
-      }
-      html.theme-dark .sidebar .list-group-item.active {
-        background-color: #E67E22 !important;
-        color:            #2C2C2C  !important;
-        border-color:     #E67E22  !important;
-      }
-      html.theme-dark .sidebar .list-group-item:hover {
-        background-color: #4A4A4A !important;
-        color:            #EEEEEE  !important;
-      }
-      /* ========== BUTTONS ========== */
-      html.theme-dark .btn-primary {
-        background-color: #E67E22 !important;
-        border-color:     #E67E22 !important;
-        color:            #FFFFFF !important;
-      }
-      html.theme-dark .btn-primary:hover {
-        background-color: #D35400 !important;
-        border-color:     #D35400 !important;
-      }
-      html.theme-dark .btn-outline-primary {
-        color:         #E67E22 !important;
-        border-color:  #E67E22 !important;
-      }
-      html.theme-dark .btn-outline-primary:hover {
-        background-color: #E67E22 !important;
-        color:            #FFFFFF !important;
-      }
-      /* ========== INPUTS & DROPDOWNS ========== */
-      html.theme-dark input,
-      html.theme-dark select,
-      html.theme-dark textarea {
-        background-color: #3A3A3A !important;
-        color:            #EEEEEE  !important;
-        border-color:     #444444  !important;
-      }
-      html.theme-dark .selectize-input,
-      html.theme-dark .selectize-dropdown {
-        background-color: #3A3A3A !important;
-        color:            #EEEEEE  !important;
-        border-color:     #444444  !important;
-      }
-      /* ========== DATE-RANGE “to” ADDON ========== */
-      html.theme-dark .input-group-addon,
-      html.theme-dark .input-group-text {
-        background-color: #3A3A3A !important;
-        color:            #EEEEEE  !important;
-        border-color:     #444444  !important;
-      }
-      
-      
-      /* OCEAN: teal backgrounds, sea-green accents */
-      html.theme-ocean {
-        background-color: #E0F7FA !important;
-      }
-      html.theme-ocean body {
-        background-color: #E0F7FA !important;
-      }
-      html.theme-ocean .sidebar {
-        background-color: #004D40 !important;
-      }
-      html.theme-ocean .card {
-        border-left-color: #00796B !important;
-      }
-      html.theme-ocean .header-banner {
-        background: linear-gradient(90deg, #004D40, #00796B) !important;
-        color:      #E0F7FA !important;
-      }
-      html.theme-ocean .section-title {
-        color: #004D40 !important;
-      }
-      html.theme-ocean .sidebar .list-group-item {
-        background-color: #004D40 !important;
-        color:            #E0F7FA !important;
-        border-color:     #00695C !important;
-      }
-      html.theme-ocean .sidebar .list-group-item.active {
-        background-color: #00796B !important;
-        color:            #FFFFFF !important;
-        border-color:     #00796B !important;
-      }
-      html.theme-ocean .sidebar .list-group-item:hover {
-        background-color: #00695C !important;
-        color:            #E0F7FA !important;
-      }
-      /* ========== BUTTONS ========== */
-      html.theme-ocean .btn-primary {
-        background-color: #00796B !important;
-        border-color:     #00796B !important;
-        color:            #FFFFFF !important;
-      }
-      html.theme-ocean .btn-primary:hover {
-        background-color: #004D40 !important;
-        border-color:     #004D40 !important;
-      }
-      html.theme-ocean .btn-outline-primary {
-        color:         #00796B !important;
-        border-color:  #00796B !important;
-      }
-      html.theme-ocean .btn-outline-primary:hover {
-        background-color: #00796B !important;
-        color:            #FFFFFF !important;
-      }
-      /* ========== INPUTS & DROPDOWNS ========== */
-      html.theme-ocean input,
-      html.theme-ocean select,
-      html.theme-ocean textarea {
-        background-color: #E0F7FA !important;
-        color:            #004D40  !important;
-        border-color:     #00695C  !important;
-      }
-      html.theme-ocean .selectize-input,
-      html.theme-ocean .selectize-dropdown {
-        background-color: #E0F7FA !important;
-        color:            #004D40  !important;
-        border-color:     #00695C  !important;
-      }
-      /* ========== DATE-RANGE “to” ADDON ========== */
-      html.theme-ocean .input-group-addon,
-      html.theme-ocean .input-group-text {
-        background-color: #E0F7FA !important;
-        color:            #004D40  !important;
-        border-color:     #00695C  !important;
-      }
-      
-      
-      /* SOLARIZED: cream backgrounds, golden accents */
-      html.theme-solarized {
-        background-color: #FDF6E3 !important;
-      }
-      html.theme-solarized body {
-        background-color: #FDF6E3 !important;
-      }
-      html.theme-solarized .sidebar {
-        background-color: #073642 !important;
-      }
-      html.theme-solarized .card {
-        border-left-color: #268BD2 !important;
-      }
-      html.theme-solarized .header-banner {
-        background: linear-gradient(90deg, #073642, #586E75) !important;
-        color:      #EEE8D5 !important;
-      }
-      html.theme-solarized .section-title {
-        color: #B58900 !important;
-      }
-      html.theme-solarized .sidebar .list-group-item {
-        background-color: #073642 !important;
-        color:            #EEE8D5 !important;
-        border-color:     #586E75 !important;
-      }
-      html.theme-solarized .sidebar .list-group-item.active {
-        background-color: #B58900 !important;
-        color:            #073642 !important;
-        border-color:     #B58900 !important;
-      }
-      html.theme-solarized .sidebar .list-group-item:hover {
-        background-color: #586E75 !important;
-        color:            #EEE8D5 !important;
-      }
-      /* ========== BUTTONS ========== */
-      html.theme-solarized .btn-primary {
-        background-color: #B58900 !important;
-        border-color:     #B58900 !important;
-        color:            #FFFFFF !important;
-      }
-      html.theme-solarized .btn-primary:hover {
-        background-color: #9C7400 !important;
-        border-color:     #9C7400 !important;
-      }
-      html.theme-solarized .btn-outline-primary {
-        color:         #B58900 !important;
-        border-color:  #B58900 !important;
-      }
-      html.theme-solarized .btn-outline-primary:hover {
-        background-color: #B58900 !important;
-        color:            #FFFFFF !important;
-      }
-      /* ========== INPUTS & DROPDOWNS ========== */
-      html.theme-solarized input,
-      html.theme-solarized select,
-      html.theme-solarized textarea {
-        background-color: #EEE8D5 !important;
-        color:            #073642 !important;
-        border-color:     #586E75 !important;
-      }
-      html.theme-solarized .selectize-input,
-      html.theme-solarized .selectize-dropdown {
-        background-color: #EEE8D5 !important;
-        color:            #073642 !important;
-        border-color:     #586E75 !important;
-      }
-      /* ========== DATE-RANGE “to” ADDON ========== */
-      html.theme-solarized .input-group-addon,
-      html.theme-solarized .input-group-text {
-        background-color: #EEE8D5 !important;
-        color:            #073642  !important;
-        border-color:     #586E75  !important;
-      }
-      
-      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
-      /* Styling shiny-date-range input */
-      /*–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
-      
-      .input-group-text {
-        display:         flex   !important;
-        align-items:     center !important;
-        margin-right: 0.57rem !important;
-        font-size:       0      !important;
-      }
-      .input-group-text::before {
-        content:    '↔️'    !important;  /* en-dash */
-        font-size:  1rem  !important;
-        color:      currentColor !important;
-      }
-      .shiny-date-range .input-group {
-        align-items: center !important;
-      }
-      .shiny-date-range .input-group-text {
-        align-self:   center !important;
-      }
-      
-      .shiny-date-range .input-group-text {
-        /* strip away Bootstrap’s box so we only see our dash */
-        background:   transparent !important;
-        border:       none        !important;
-        font-size:    0           !important;
-        position:     relative    !important;
-      }
-      
-      .shiny-date-range .input-group-text::before {
-        content:      '<–>'         !important;
-        font-size:    1rem        !important;
-        color:        currentColor !important;
-        position:     absolute    !important;
-        top:          50%         !important;
-        left:         25%         !important;
-        transform:    translate(-50%, -50%) !important;
-      }
-    "))
+    tags$link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"),
+    includeCSS("www/css/custom.css")
   ),
-  uiOutput("mainUI")
+  
+  div(id = "app-content",
+      
+    # ——————————————————————————————————
+    # Login Panel (shown when not logged in)
+    # ——————————————————————————————————
+    div(
+      id    = "login_panel",
+      class = "card login-card",
+      h4("Login", class = "text-center mb-5"),
+      textInput("user_id_input", "User ID", placeholder = "Enter your User ID"),
+      dateInput("date_input",   "Select Date",
+                value = Sys.Date(), format = "yyyy-mm-dd"),
+      actionButton("login_button", "Login",
+                   class = "btn btn-primary mt-3")
+    ),
+    
+    # ——————————————————————————————————
+    # Main App Panel (hidden until login)
+    # ——————————————————————————————————
+    hidden(
+      div(
+        id = "main_panel",
+        
+        # Header banner
+        fluidRow(
+          column(
+            width = 12,
+            div(class = "header-banner d-flex align-items-center",
+                actionButton("toggle_sidebar", label = NULL, icon = icon("bars"),
+                             class = "btn btn-outline-primary me-3"),
+                h3("Self-Regulated Learning Dashboard", class = "mb-0 flex-grow-1"),
+                actionButton("logout_button", "Logout",
+                             class = "btn btn-logout")
+            )
+          )
+        ),
+        
+        # Sidebar + Main content
+        fluidRow(
+          # Sidebar
+          column(
+            width = 3, id = "sidebar_col",
+            div(class = "sidebar",
+                h5("Select Course"),
+                uiOutput("sidebar")
+            )
+          ),
+          # Main area
+          column(
+            width = 9, id = "main_col",
+            div(class = "main-content",
+                
+                # Welcome card
+                div(class = "card p-3 mb-5",
+                    fluidRow(
+                      column(
+                        width = 8,
+                        h4(textOutput("dashboardTitle", inline = TRUE),
+                           class = "mb-2")
+                      ),
+                      column(width = 2, div()),
+                      column(
+                        width = 2,
+                        div(class = "p", textOutput("selectedUserId"))
+                      )
+                    )
+                ),
+                
+                # Two columns: Tracker/Reflections & Graph/Badges
+                fluidRow(
+                  # Left column
+                  column(
+                    width = 6,
+                    # Activity Tracker
+                    div(class = "card p-3 mb-5",
+                        div(class = "section-title","Activity Tracker"),
+                        withSpinner(
+                          uiOutput("activityTracker"),
+                          type = 6,
+                          color = "#2980B9"
+                        )
+                    ),
+                    # Reflections
+                    div(class = "card p-3 mb-5",
+                        div(class = "section-title","Reflections"),
+                        withSpinner(
+                          uiOutput("reflections_card"),
+                          type = 6,
+                          color = "#2980B9"
+                        )
+                    )
+                  ),
+                  # Right column
+                  column(
+                    width = 6,
+                    # Graph Builder
+                    div(class = "card p-3 mb-5",
+                        div(class = "section-title","Weekly Activity Overview"),
+                        fluidRow(
+                          column(4,
+                                 selectInput("data_type","Select Activity",
+                                             choices = c("Quizzes","Files","Discussions","Assignments"),
+                                             selected = "Quizzes")
+                          ),
+                          column(4, 
+                                 selectInput("selected_week", "Select Week", 
+                                             choices = setNames(1:10, paste("Week", 1:10)), 
+                                             selected = 1, 
+                                             width = "100%") 
+                          ),
+                          column(4,
+                                 uiOutput("metric_ui")
+                          )
+                        ),
+                        br(),
+                        uiOutput("activity_view")
+                    ),
+                    # Badges
+                    div(class = "card p-3 mb-5",
+                        div(class = "section-title","Badges"),
+                        withSpinner(
+                          uiOutput("badges"),
+                          type = 6,
+                          color = "#2980B9"
+                        )
+                    )
+                  )
+                ) # end fluidRow
+            ) # end main-content
+          ) # end col-9
+        ) # end fluidRow
+      ) # end main_panel
+    ) # end hidden()
+  ) # app-content div
 )
 
 server <- function(input, output, session) {
+  sidebar_collapsed <- reactiveVal(FALSE)
   activity_completion <- reactiveValues(data = list())
   credentials <- reactiveValues(logged_in = FALSE, user_id = NULL, date = NULL)
+  userCourses <- reactiveVal(NULL)
+  
   credentials$theme <- "default"
   `%||%` <- function(a, b) if (!is.null(a)) a else b
   
@@ -627,19 +172,13 @@ server <- function(input, output, session) {
   # Handle login
   observeEvent(input$login_button, {
     req(input$user_id_input, input$date_input)
+    
+    shinyjs::hide("login_panel")
+    shinyjs::show("main_panel")
+    
     credentials$logged_in <- TRUE
     credentials$user_id <- input$user_id_input
     credentials$date <- input$date_input
-    
-    # auto starts activity graph to assignments by submission for last 7 days
-    updateSelectInput(session, "data_type",
-                      selected = "Assignments")
-    updateDateRangeInput(session, "date_range",
-                         start = as.Date(credentials$date) - 7,
-                         end   = as.Date(credentials$date))
-    updateSelectInput(session, "metric",
-                      selected = "Number of Submissions")
-    shinyjs::click("submit_query")
     
     # load saved theme (if any)
     prefs_file <- "all_users_data.json"
@@ -659,6 +198,29 @@ server <- function(input, output, session) {
       selector = "html"
     )
     
+    # Fetch and cache this user’s course_ids
+    df <- dbGetQuery(
+      sc,
+      sprintf("
+       SELECT DISTINCT course_id
+       FROM sandbox_la_conijn_cbl.silver_canvas_enrollments
+       WHERE user_id = '%s'
+     ", credentials$user_id)
+    )
+    userCourses(as.character(df$course_id))
+    
+    # auto starts activity graph to assignments by submission for last 7 days
+    updateSelectInput(session, "data_type",
+                      selected = "Assignments")
+    updateDateRangeInput(session, "date_range",
+                         start = as.Date(credentials$date) - 7,
+                         end   = as.Date(credentials$date))
+    updateSelectInput(session, "metric",
+                      selected = "Number of Submissions")
+    shinyjs::click("submit_query")
+    
+    updateSelectInput(session, "selected_week",
+                      selected = weekNumber())
     
     # Clear old user data
     satisfaction_ratings$data <- list()
@@ -675,9 +237,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, "data_type",
                       selected = "Assignments")
     # set the date_range to the last 7 days *ending* on the new banner date
-    updateDateRangeInput(session, "date_range",
-                         start = as.Date(input$date_input) - 7,
-                         end   = as.Date(input$date_input))
+    updateSelectInput(session, "selected_week",
+                      selected = weekNumber())
     updateSelectInput(session, "metric",
                       selected = "Number of Submissions")
     # trigger the plot to redraw
@@ -725,182 +286,98 @@ server <- function(input, output, session) {
   
   # Handle logout
   observeEvent(input$logout_button, {
+    # Reset UI theme back to default
+    shinyjs::removeClass(
+      class = c("theme-default","theme-light","theme-dark","theme-ocean","theme-solarized"),
+      selector = "html")
+    shinyjs::addClass(class = "theme-default", selector = "html")
+
     credentials$logged_in <- FALSE
-    credentials$user_id <- NULL
+    credentials$user_id   <- NULL
+
+    shinyjs::show("login_panel")
+    shinyjs::hide("main_panel")
   })
   
-  # Main UI rendering
-  output$mainUI <- renderUI({
-    if (!credentials$logged_in) {
-      # Login UI
-      fluidPage(
-        div(class = "card login-card",
-            h4("Login", class = "text-center mb-5"),
-            textInput("user_id_input", "User ID", placeholder = "Enter your User ID"),
-            dateInput("date_input", "Select Date", value = Sys.Date(), format = "yyyy-mm-dd"),
-            actionButton("login_button", "Login", class = "btn btn-primary mt-3")
-        )
-      )
+  observeEvent(input$toggle_sidebar, {
+    collapsed <- !sidebar_collapsed()
+    sidebar_collapsed(collapsed)
+    
+    # sidebar collapse animations
+    if (collapsed) {
+      shinyjs::runjs("
+      $('#sidebar_col').css('overflow','hidden')
+                      .animate({ width: '0%' }, 300, function(){ $(this).hide(); });
+      $('#main_col').animate({ width: '100%' }, 300);
+    ")
     } else {
-      # Main App UI
-      fluidPage(
-        # Header banner
-        fluidRow(
-          column(
-            width = 12,
-            div(class = "header-banner d-flex justify-content-between align-items-center",
-                h3("Self-Regulated Learning Dashboard"),
-                # right‐side controls
-                div(class = "d-flex align-items-stretch", style = "gap:0.5rem;",
-                    # date picker: make its wrapper a flex box
-                    #div(class = "shiny-date-input d-flex align-items-center", 
-                    #    dateInput("date_input hidde", NULL,
-                    #              value  = credentials$date,
-                    #              format = "yyyy-mm-dd",
-                    #              width  = "120px")
-                    #),
-                    # logout button: also flex + center
-                    actionButton("logout_button", "Logout",
-                                 class = "btn btn-logout d-flex align-items-center justify-content-center")
-                )
-            )
-          )
-        ),
-        # Sidebar + Main content
-        fluidRow(
-          # Sidebar as vertical nav
-          column(
-            width = 3,
-            div(class = "sidebar",
-                h5("Select Course"),
-                uiOutput("sidebar")  # will render list-group links
-            )
-          ),
-          # Main content area
-          column(
-            width = 9,
-            div(class = "main-content",
-                # Welcome card
-                div(class = "card p-3 mb-5",
-                    fluidRow(
-                      column(
-                        width = 8,
-                        h4(textOutput("dashboardTitle", inline = TRUE), class = "mb-2")
-                      ),
-                      column(
-                        width = 4,
-                        div(class = "p", textOutput("selectedUserId"))
-                      )
-                    )
-                ),
-                # Two columns for tracker/reflections and plots/badges
-                fluidRow(
-                  # Left column
-                  column(
-                    width = 6,
-                    # Activity Tracker
-                    div(class = "card p-3 mb-5",
-                        div(class = "section-title", "Activity Tracker"),
-                        uiOutput("activityTracker")
-                    ),
-                    # Reflections
-                    div(class = "card p-3 mb-5",
-                        div(class = "section-title", "Reflections"),
-                        textOutput("current_week_display"),
-                        br(),
-                        uiOutput("satisfaction_ui"),
-                        uiOutput("expectation_ui"),
-                        uiOutput("save_button_ui"),
-                        br(),
-                        div(class = "text-muted mb-3", uiOutput("satisfaction_feedback")),
-                        uiOutput("streak_badge")
-                    )
-                  ),
-                  # Right column
-                  column(
-                    width = 6,
-                    # ————————————————————————————————————————————————
-                    # Activity Tracker Graph Builder
-                    # ————————————————————————————————————————————————
-                    div(class = "card p-3 mb-5",
-                        div(class = "section-title", "Activity Tracker Graph Builder"),
-                        fluidRow(
-                          column(4,
-                                 selectInput("data_type", "Select Data Type",
-                                             choices = c("Quizzes", "Files", "Discussions", "Assignments"),
-                                             selected = "Quizzes")
-                          ),
-                          column(4,
-                                 dateRangeInput("date_range", "Date Range",
-                                                start  = Sys.Date() - 7,
-                                                end    = Sys.Date(),
-                                                format = "yyyy-mm-dd")
-                          ),
-                          column(4,
-                                 uiOutput("metric_ui")
-                          )
-                        ),
-                        br(),
-                        plotlyOutput("activityPlot", height = "400px")
-                    ),
-                    # Badges
-                    div(class = "card p-3 mb-5",
-                        div(class = "section-title", "Badges"),
-                        uiOutput("badges")
-                    )
-                  )
-                )
-            )
-          )
-        )
-      )
+      shinyjs::runjs("
+      $('#sidebar_col').show()
+                      .css({ overflow: 'hidden', width: '0%' })
+                      .animate({ width: '25%' }, 300);
+      $('#main_col').animate({ width: '75%' }, 300);
+    ")
     }
+    
+    # give the CSS animation 300ms to finish, then fire a resize
+    shinyjs::delay(100, shinyjs::runjs("window.dispatchEvent(new Event('resize'));"))
   })
   
   #########################
   # Render sidebar links
   #########################
   output$sidebar <- renderUI({
-    current <- selectedCourse()
-    tags$div(class = "list-group",
-             actionLink(
-               inputId = "course_27886",
-               label   = "0HV30-2024",
-               class   = paste0("list-group-item list-group-item-action",
-                                if (current == "27886") " active" else "")
-             ),
-             actionLink(
-               inputId = "course_28301",
-               label   = "0HV60-2024",
-               class   = paste0("list-group-item list-group-item-action",
-                                if (current == "28301") " active" else "")
-             ),
-             actionLink(
-               inputId = "course_27893",
-               label   = "0HV90-2024",
-               class   = paste0("list-group-item list-group-item-action",
-                                if (current == "27893") " active" else "")
-             ),
-             actionLink(
-               inputId = "course_27974",
-               label   = "0HV100-2024",
-               class   = paste0("list-group-item list-group-item-action",
-                                if (current == "27974") " active" else "")
-             ),
-             # Theme picker inline
-             div(class = "list-group-item theme-selector",
-                 selectInput("theme_choice", tags$strong("🎨 Theme Picker"),
-                             choices = c(
-                               "Default"    = "default",
-                               "Light"      = "light",
-                               "Dark"       = "dark",
-                               "Ocean"      = "ocean",
-                               "Solarized"  = "solarized"
-                             ),
-                             selected = credentials$theme,
-                             width = "100%"),
-                 actionButton("apply_theme", "Apply", class = "btn btn-outline-primary btn-sm mt-2")
-             )
+    req(credentials$logged_in)
+    
+    # Master map of all possible courses
+    course_map <- list(
+      "27886" = "0HV30-2024",
+      "28301" = "0HV60-2024",
+      "27893" = "0HV90-2024",
+      "27974" = "0HV100-2024"
+    )
+    
+    # Only keep those the user actually has
+    available <- intersect(names(course_map), userCourses())
+    
+    # Build one actionLink per available course
+    items <- lapply(available, function(cid) {
+      actionLink(
+        inputId = paste0("course_", cid),
+        label   = course_map[[cid]],
+        class   = paste0(
+          "list-group-item list-group-item-action",
+          if (selectedCourse() == cid) " active" else ""
+        )
+      )
+    })
+    
+    theme_picker <- div(
+      class = "list-group-item theme-selector mt-5",
+      style = "margin-top: 100px !important;",
+      selectInput(
+        "theme_choice", tags$strong("🎨 Theme Picker"),
+        choices = c(
+          "Default"   = "default",
+          "Light"     = "light",
+          "Dark"      = "dark",
+          "Ocean"     = "ocean",
+          "Solarized" = "solarized"
+        ),
+        selected = credentials$theme,
+        width = "100%"
+      ),
+      actionButton(
+        "apply_theme", "Apply",
+        class = "btn btn-outline-primary btn-sm mt-2"
+      )
+    )
+    
+    # Wrap up
+    tags$div(
+      class = "list-group",
+      items,
+      theme_picker
     )
   })
   
@@ -1136,562 +613,564 @@ server <- function(input, output, session) {
   
   # Dynamic user info
   output$selectedUserId <- renderText({
-    course_id_value <- course_id()
     user_id_value <- user_id()
-    date_value <- credentials$date
-    week <- weekNumber()
-    
-    # Example query - replace with actual DB connection details
-    totat_sec_result <- tbl(sc, in_schema("sandbox_la_conijn_CBL", "silver_canvas_enrollments")) %>%
-      filter(course_id == course_id_value, user_id == user_id_value) %>%
-      select(total_active_seconds) %>%
-      head(1) %>%
-      collect()
-    
-    seconds <- if (nrow(totat_sec_result) > 0) {
-      totat_sec_result$total_active_seconds[1]
-    } else {
-      0
-    }
-    
-    paste("Welcome", user_id_value, "| Date:", date_value, "| Currently in week:", week, "| Total Active Time:", seconds, "seconds")
+    paste("Welcome", user_id_value, " !")
   })
   
   output$activityTracker <- renderUI({
     req(user_id(), credentials$date)
     
-    course <- as.character(course_id())
-    user <- user_id()
-    week <- weekNumber()
-    
-    # Two-week block logic (1–2, 3–4, etc.)
+    # 1. Compute block & timestamps
+    course      <- as.character(course_id())
+    user        <- user_id()
+    week        <- weekNumber()
     block_start <- (((week - 1) %/% 2) * 2) + 1
-    block_end <- block_start + 1
-    block <- as.character(block_start)
+    block_end   <- block_start + 1
+    block_str   <- as.character(block_start)
     
-    # Timestamp helper
-    get_week_timestamps <- function(week_num, course_start_date) {
-      start_of_week <- course_start_date + (7 * (week_num - 1))
-      end_of_week <- start_of_week + 7
+    start_block <- COURSE_START_DATE + (block_start - 1) * 7
+    end_block   <- COURSE_START_DATE +   block_end   * 7
+    start_ts    <- paste0(start_block, " 00:00:00.000")
+    end_ts      <- paste0(end_block,   " 00:00:00.000")
+    
+    # 2. One query for quiz weeks in this block
+    quiz_sql <- sprintf("
+    SELECT floor(extract(day 
+      from finished_at_anonymous - DATE '%s') / 7) + 1 AS week
+    FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
+    WHERE user_id = '%s'
+      AND workflow_state IN ('pending_review','complete')
+      AND finished_at_anonymous >= '%s'
+      AND finished_at_anonymous <  '%s'
+    GROUP BY week;",
+                        COURSE_START_DATE, user, start_ts, end_ts
+    )
+    quiz_weeks <- tryCatch(dbGetQuery(sc, quiz_sql)$week, error = function(e) integer())
+    
+    # 3. One query for assignment weeks in this block
+    assign_sql <- sprintf("
+    SELECT floor(extract(day 
+      from submitted_at_anonymous - DATE '%s') / 7) + 1 AS week
+    FROM sandbox_la_conijn_cbl.silver_canvas_submissions
+    WHERE user_id = '%s'
+      AND workflow_state IN ('pending_review','graded','submitted')
+      AND submitted_at_anonymous >= '%s'
+      AND submitted_at_anonymous <  '%s'
+    GROUP BY week;",
+                          COURSE_START_DATE, user, start_ts, end_ts
+    )
+    assign_weeks <- tryCatch(dbGetQuery(sc, assign_sql)$week, error = function(e) integer())
+    
+    # 4. Build a flat list of six activities (quiz, assignment, reflect) for each week
+    weeks <- c(block_start, block_end)
+    all_activities <- lapply(weeks, function(w) {
       list(
-        start_time = paste0(start_of_week, " 00:00:00.000"),
-        end_time = paste0(end_of_week, " 00:00:00.000")
+        list(name = sprintf("Submit Week %d Quiz",      w), done = w %in% quiz_weeks),
+        list(name = sprintf("Submit Week %d Assignment", w), done = w %in% assign_weeks),
+        list(name = sprintf("Reflect on Week %d",        w), done = isTRUE(reflection_saved$data[[course]][[as.character(w)]]))
       )
-    }
+    }) %>% unlist(recursive = FALSE)
     
-    # DB check helpers
-    is_quiz_submitted <- function(user_id, start_time, end_time, db_con) {
-      query <- sprintf("
-      SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions
-      WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'complete') AND 
-      finished_at_anonymous >= '%s' AND finished_at_anonymous < '%s';",
-                       user_id, start_time, end_time
-      )
-      result <- tryCatch({
-        dbGetQuery(db_con, query)
-      }, error = function(e) {
-        cat("Error querying quiz subs:", e$message, "\n")
-        data.frame(submitted = FALSE)
-      })
-      if (nrow(result) > 0) result$submitted[1] else FALSE
-    }
+    total     <- length(all_activities)
+    completed <- sum(vapply(all_activities, `[[`, logical(1), "done"))
+    percent   <- if (total > 0) round(completed / total * 100) else 0
     
-    is_assignment_submitted <- function(user_id, start_time, end_time, db_con) {
-      query <- sprintf("
-      SELECT COUNT(*) > 0 AS submitted FROM sandbox_la_conijn_cbl.silver_canvas_submissions
-      WHERE user_id = '%s' AND workflow_state IN ('pending_review', 'graded', 'submitted') AND 
-      submitted_at_anonymous >= '%s' AND submitted_at_anonymous < '%s';",
-                       user_id, start_time, end_time
-      )
-      result <- tryCatch({
-        dbGetQuery(db_con, query)
-      }, error = function(e) {
-        cat("Error querying assignment subs:", e$message, "\n")
-        data.frame(submitted = FALSE)
-      })
-      if (nrow(result) > 0) result$submitted[1] else FALSE
-    }
-    
-    reflected <- function(week_num) {
-      isTRUE(reflection_saved$data[[course]][[as.character(week_num)]])
-    }
-    
-    make_week_activities <- function(week_num) {
-      timestamps <- get_week_timestamps(week_num, COURSE_START_DATE)
-      quiz_done <- is_quiz_submitted(user, timestamps$start_time, timestamps$end_time, sc)
-      assignment_done <- is_assignment_submitted(user, timestamps$start_time, timestamps$end_time, sc)
-      list(
-        list(name = sprintf("Submit Week %d Quiz", week_num), done = quiz_done),
-        list(name = sprintf("Submit Week %d Assignment", week_num), done = assignment_done),
-        list(name = sprintf("Reflect on Week %d", week_num), done = reflected(week_num))
-      )
-    }
-    
-    # Build activity list
-    all_activities <- c(make_week_activities(block_start), make_week_activities(block_end))
-    total <- length(all_activities)
-    completed <- sum(sapply(all_activities, function(x) x$done))
-    percent <- if (total > 0) round((completed / total) * 100) else 0
-    
-    # Completion tracking logic
-    completion <- 0
-    if (percent == 100) {
-      completion <- 1
-      if (is.null(activity_completion$data[[course]])) {
-        activity_completion$data[[course]] <- list()
-      }
-      activity_completion$data[[course]][[block]] <- TRUE
-      saveActivityCompletion(user_id(), course, block, TRUE)
-    } else if (completion == 1) {
-      completion <- 0
-      isolate({ activity_completion$data[[course]][[block]] <- NULL })
-      file_path <- "activity_completion_data.json"
-      if (file.exists(file_path)) {
-        data <- jsonlite::read_json(file_path, simplifyVector = FALSE)
-        if (!is.null(data[[user]][[course]][[block]])) {
-          data[[user]][[course]][[block]] <- NULL
-          if (length(data[[user]][[course]]) == 0) data[[user]][[course]] <- NULL
-          if (length(data[[user]]) == 0) data[[user]] <- NULL
-          jsonlite::write_json(data, file_path, pretty = TRUE, auto_unbox = TRUE)
+    # 5. Only write JSON when the “done” flag for this block actually flips
+    prev_done <- activity_completion$data[[course]][[block_str]] %||% FALSE
+    if (percent == 100 && !prev_done) {
+      activity_completion$data[[course]][[block_str]] <- TRUE
+      saveActivityCompletion(user, course, block_str, TRUE)
+    } else if (percent < 100 && prev_done) {
+      activity_completion$data[[course]][[block_str]] <- FALSE
+      # Remove it from disk, just like your original code
+      fp <- "activity_completion_data.json"
+      if (file.exists(fp)) {
+        dat <- jsonlite::read_json(fp, simplifyVector = FALSE)
+        if (!is.null(dat[[user]][[course]][[block_str]])) {
+          dat[[user]][[course]][[block_str]] <- NULL
+          if (length(dat[[user]][[course]]) == 0) dat[[user]][[course]] <- NULL
+          if (length(dat[[user]])          == 0) dat[[user]]          <- NULL
+          jsonlite::write_json(dat, fp, pretty = TRUE, auto_unbox = TRUE)
         }
       }
-    } else {
-      activity_completion$data[[course]][[block]] <- FALSE
     }
     
-    # Feedback text
-    activity_feedback_text <- if (completed == total && total > 0) {
+    # 6. Choose the feedback message
+    feedback_text <- if (completed == total && total > 0) {
       "Great job! You've completed all activities for this block. 🎉"
     } else if (completed > 0) {
       "Excellent! You've checked another activity off the list. Keep the momentum going! 💪"
     } else {
       "It looks like you're just getting started! For a good overview, perhaps look at the activity breakdown to see where you can best invest your time. 🗺️"
     }
-    feedback_html <- sprintf("<div class='alert alert-info mt-3' role='alert'>%s</div>", activity_feedback_text)
     
-    # UI generation
-    list_items <- paste0(
-      "<ul class='list-group mb-3'>",
-      paste(sapply(all_activities, function(x) {
-        if (x$done) {
-          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-success'>✅ %s</li>", x$name)
-        } else {
-          sprintf("<li class='list-group-item d-flex justify-content-between align-items-center text-muted'>⬜ %s</li>", x$name)
-        }
-      }), collapse = ""), "</ul>"
+    # 7. Render the HTML via tags (faster & safer than paste0)
+    tagList(
+      tags$ul(class = "list-group mb-3",
+              lapply(all_activities, function(act) {
+                cls  <- if (act$done) "text-success" else "text-muted"
+                icon <- if (act$done) "✅" else "⬜"
+                tags$li(class = paste("list-group-item d-flex justify-content-between align-items-center", cls),
+                        HTML(paste(icon, act$name)))
+              })
+      ),
+      tags$div(class = "progress",
+               tags$div(class = "progress-bar bg-success", role = "progressbar",
+                        style               = sprintf("width: %d%%;", percent),
+                        `aria-valuenow`     = percent,
+                        `aria-valuemin`     = 0,
+                        `aria-valuemax`     = 100,
+                        sprintf("%d%%", percent)
+               )
+      ),
+      tags$div(class = "alert alert-info mt-3", role = "alert", feedback_text)
     )
-    progress_bar <- sprintf("<div class='progress'><div class='progress-bar bg-success' role='progressbar' style='width: %d%%;' aria-valuenow='%d' aria-valuemin='0' aria-valuemax='100'>%d%%</div></div>", percent, percent, percent)
-    
-    HTML(paste0(list_items, progress_bar, feedback_html))
   })
-  
   
   # ----------------------------
   # Dynamic Metric Selector UI
   # ----------------------------
   output$metric_ui <- renderUI({
     req(input$data_type)
-    switch(input$data_type,
-           "Quizzes" = selectInput(
-             "metric", "Metric",
-             choices = c("Time Spent", "Number of Submissions"),
-             selected = "Time Spent"
-           ),
-           "Files" = selectInput(
-             "metric", "Metric",
-             choices = c("Number of Submissions"),
-             selected = "Number of Submissions"
-           ),
-           "Discussions" = selectInput(
-             "metric", "Metric",
-             choices = c("Number of Posts"),
-             selected = "Number of Posts"
-           ),
-           "Assignments" = selectInput(
-             "metric", "Metric",
-             choices = c("Number of Submissions", "Average Score"),
-             selected = "Number of Submissions"
-           )
+    choices <- switch(input$data_type,
+                      "Quizzes" = c(
+                        "Submissions"        = "Submissions",
+                        "Average Score"  = "Avg Quiz Score",
+                        "Min & Max Scores"      = "Max Quiz Score"
+                      ),
+                      "Files" = c(
+                        "File Accesses"         = "File Accesses",
+                        "Unique Files Accessed" = "Unique Files Accessed"
+                      ),
+                      "Discussions" = c(
+                        "Number of Posts" = "Number of Posts",
+                        "Replies Made"    = "Replies Made"
+                      ),
+                      "Assignments" = c(
+                        "Submissions"            = "Submissions",
+                        "Average Score"      = "Avg Assignment Score",
+                        "Min & Max Scores"          = "Max Assignment Score",
+                        "Submission Attempts"    = "Submission Attempts"
+                      )
+    )
+    selectInput("metric", "Select Metric",
+                choices = choices,
+                selected = names(choices)[1]
     )
   })
   
   # ----------------------------------------
-  # Reactive Data Fetcher for ActivityData
+  # Reactive Data Fetcher for Activity Data
   # ----------------------------------------
   activityData <- eventReactive(
-    { 
-      input$submit_query
-      input$data_type
-      input$date_range
-      input$metric
-      selectedCourse()
-    },
+    list(input$data_type, input$metric, input$selected_week, selectedCourse()),
     {
-      req(input$data_type, input$date_range, input$metric)
+      req(input$data_type, input$metric, input$selected_week)
       
-      # build timestamps
-      start_ts <- paste0(input$date_range[1], " 00:00:00")
-      end_ts   <- paste0(input$date_range[2] + 1, " 00:00:00")
-      user     <- credentials$user_id
-      course   <- course_id()
+      # compute 7-day window
+      week_idx   <- as.integer(input$selected_week)
+      start_date <- COURSE_START_DATE + (week_idx - 1) * 7
+      end_date   <- start_date + 6L
       
-      # pick table, date column, aggregation & y‐axis label
-      if (input$data_type == "Quizzes") {
-        tbl      <- "silver_canvas_quiz_submissions"
-        date_col <- "finished_at_anonymous"
-        if (input$metric == "Time Spent") {
-          agg_expr <- "COALESCE(SUM(DurationInMinutes),0) AS value"
-          ylab     <- "Time Spent (min)"
-        } else {
-          agg_expr <- "COUNT(*) AS value"
-          ylab     <- "Submissions"
-        }
-      } else if (input$data_type == "Files") {
-        tbl      <- "silver_canvas_web_logs"
-        date_col <- "timestamp"
-        agg_expr <- "COUNT(*) AS value"
-        ylab     <- "File Accesses"
-      } else if (input$data_type == "Discussions") {
-        tbl      <- "silver_canvas_discussion_entries"
-        date_col <- "created_at_anonymous"
-        agg_expr <- "COUNT(*) AS value"
-        ylab     <- "Posts"
-      } else if (input$data_type == "Assignments") {
-        tbl      <- "silver_canvas_submissions"
-        date_col <- "submitted_at_anonymous"
-        if (input$metric == "Number of Submissions") {
-          agg_expr <- "COUNT(*) AS value"
-          ylab     <- "Submissions"
-        } else {
-          agg_expr <- "COALESCE(AVG(score_anonymous),0) AS value"
-          ylab     <- "Average Score"
-        }
-      }
+      start_ts <- paste0(start_date, " 00:00:00")
+      end_ts   <- paste0(end_date + 1,  " 00:00:00")
       
-      # construct and run query
-      query <- sprintf("
-    SELECT
-      CAST(%s AS DATE) AS day,
-      %s
-    FROM sandbox_la_conijn_cbl.%s
-    WHERE user_id = '%s'
-      AND %s BETWEEN '%s' AND '%s'
-      AND course_id = %s
-    GROUP BY CAST(%s AS DATE)
-    ORDER BY day;
-  ", date_col, agg_expr, tbl, user, date_col, start_ts, end_ts, course, date_col)
+      user   <- credentials$user_id
+      course <- course_id()
       
-      df <- tryCatch(
-        dbGetQuery(sc, query),
-        error = function(e) {
-          # if error, return zeros for full range
-          days <- seq.Date(input$date_range[1], input$date_range[2], by = "day")
-          data.frame(day = days, value = 0)
-        }
+      # simple‐count metrics config
+      config <- switch(input$data_type,
+                       "Quizzes" = {
+                         if (input$metric == "Submissions") {
+                           list(tbl="silver_canvas_quiz_submissions",
+                                date_col="finished_at_anonymous",
+                                expr="COUNT(*) AS value",
+                                ylab="Submissions")
+                         } else NULL
+                       },
+                       "Files" = {
+                         if (input$metric == "File Accesses") {
+                           list(tbl="silver_canvas_web_logs",
+                                date_col="timestamp",
+                                expr="COUNT(*) AS value",
+                                ylab="File Accesses")
+                         } else {
+                           list(tbl="silver_canvas_web_logs",
+                                date_col="timestamp",
+                                expr="COUNT(DISTINCT attachment_id) AS value",
+                                ylab="Unique Files Accessed")
+                         }
+                       },
+                       "Discussions" = {
+                         if (input$metric == "Number of Posts") {
+                           list(tbl="silver_canvas_discussion_entries",
+                                date_col="created_at_anonymous",
+                                expr="COUNT(*) AS value",
+                                ylab="Posts")
+                         } else {
+                           list(tbl="silver_canvas_discussion_entries",
+                                date_col="created_at_anonymous",
+                                expr="COUNT(*) FILTER (WHERE parent_entry_id IS NOT NULL) AS value",
+                                ylab="Replies Made")
+                         }
+                       },
+                       "Assignments" = {
+                         if (input$metric == "Submissions") {
+                           list(tbl="silver_canvas_submissions",
+                                date_col="submitted_at_anonymous",
+                                expr="COUNT(*) AS value",
+                                ylab="Submissions")
+                         } else if (input$metric == "Submission Attempts") {
+                           list(tbl="silver_canvas_submissions",
+                                date_col="submitted_at_anonymous",
+                                expr="COALESCE(SUM(attempt),0) AS value",
+                                ylab="Submission Attempts")
+                         } else NULL
+                       }
       )
       
-      # ensure every day is present
-      all_days <- data.frame(day = seq.Date(input$date_range[1], input$date_range[2], by = "day"))
-      df       <- merge(all_days, df, by = "day", all.x = TRUE)
+      # Unified raw-score query for Avg/Min&Max branches (Assignments & Quizzes)
+      if (input$data_type == "Quizzes" &&
+          input$metric %in% c("Avg Quiz Score", "Max Quiz Score")) {
+        
+        # Always fetch raw scores per submission for this week
+        query <- sprintf(
+          "SELECT CAST(s.finished_at_anonymous AS DATE) AS day,
+                (s.score_anonymous / q.points_possible * 100) AS value
+         FROM sandbox_la_conijn_cbl.silver_canvas_quiz_submissions AS s
+         LEFT JOIN sandbox_la_conijn_cbl.silver_canvas_quizzes AS q
+           ON s.quiz_id = q.id
+         WHERE s.user_id = '%s'
+           AND s.finished_at_anonymous BETWEEN '%s' AND '%s'
+           AND s.course_id = %s;",
+          user, start_ts, end_ts, course
+        )
+        df_raw <- tryCatch(dbGetQuery(sc, query),
+                           error = function(e)
+                             data.frame(day=as.Date(character(0)), value=numeric(0)))
+        
+        # Aggregate to daily mean for plot and details
+        all_days <- data.frame(day=seq.Date(start_date, end_date, by="day"))
+        # For each day: average score (if any), 0 otherwise
+        daily_means <- tapply(df_raw$value, df_raw$day, mean)
+        df <- merge(all_days, data.frame(day=as.Date(names(daily_means)), value=as.numeric(daily_means)), by="day", all.x=TRUE)
+        df$value[is.na(df$value)] <- 0
+        
+        ylab <- if (input$metric == "Avg Quiz Score")
+          "Average Quiz Score (%)" else "Max Quiz Score (%)"
+        # Attach the raw scores (for correct min/max display)
+        attr(df, "raw_values") <- df_raw
+        
+      } else if (input$data_type == "Assignments" &&
+                 input$metric %in% c("Avg Assignment Score", "Max Assignment Score")) {
+        
+        # Always fetch raw scores per submission for this week
+        query <- sprintf(
+          "SELECT CAST(s.submitted_at_anonymous AS DATE) AS day,
+                (s.score_anonymous / a.points_possible * 100) AS value
+         FROM sandbox_la_conijn_cbl.silver_canvas_submissions AS s
+         LEFT JOIN sandbox_la_conijn_cbl.silver_canvas_assignments AS a
+           ON s.assignment_id = a.id
+         WHERE s.user_id = '%s'
+           AND s.submitted_at_anonymous BETWEEN '%s' AND '%s'
+           AND s.course_id = %s;",
+          user, start_ts, end_ts, course
+        )
+        df_raw <- tryCatch(dbGetQuery(sc, query),
+                           error = function(e)
+                             data.frame(day=as.Date(character(0)), value=numeric(0)))
+        
+        # Aggregate to daily mean for plot and details
+        all_days <- data.frame(day=seq.Date(start_date, end_date, by="day"))
+        daily_means <- tapply(df_raw$value, df_raw$day, mean)
+        df <- merge(all_days, data.frame(day=as.Date(names(daily_means)), value=as.numeric(daily_means)), by="day", all.x=TRUE)
+        df$value[is.na(df$value)] <- 0
+        
+        ylab <- if (input$metric == "Avg Assignment Score")
+          "Average Assignment Score (%)" else "Max Assignment Score (%)"
+        attr(df, "raw_values") <- df_raw
+        
+      } else {
+        # default single‐table metrics (counts, etc.)
+        df_config <- config
+        df <- tryCatch(
+          dbGetQuery(sc, sprintf(
+            "SELECT CAST(%s AS DATE) AS day, %s
+           FROM sandbox_la_conijn_cbl.%s
+           WHERE user_id = '%s'
+             AND %s BETWEEN '%s' AND '%s'
+             AND course_id = %s
+           GROUP BY day
+           ORDER BY day;",
+            df_config$date_col, df_config$expr, df_config$tbl,
+            user, df_config$date_col, start_ts, end_ts, course
+          )),
+          error = function(e)
+            data.frame(day=seq.Date(start_date, end_date, by="day"), value=0)
+        )
+        ylab <- df_config$ylab
+        attr(df, "raw_values") <- NULL
+      }
+      
+      # ensure full week (already handled above for Avgs)
+      # Merge for others just in case
+      all_days <- data.frame(day=seq.Date(start_date, end_date, by="day"))
+      df       <- merge(all_days, df, by="day", all.x=TRUE)
       df$value[is.na(df$value)] <- 0
       
-      list(df = df, ylab = ylab)
-    })
+      list(df = df, ylab = ylab, raw = attr(df, "raw_values"))
+    }
+  )
   
-  # single unified plot
+  # ———————————————————————————————————————
+  # 1) Plotly renderer (only when not avg/max)
+  # ———————————————————————————————————————
   output$activityPlot <- renderPlotly({
-    suppressWarnings({
-      dat <- activityData()
-      req(dat)
-      th     <- credentials$theme
-      accent <- switch(th,
-                       "light"     = "#2980B9",
-                       "dark"      = "#E67E22",
-                       "ocean"     = "#00796B",
-                       "solarized" = "#B58900",
-                       "#2980B9"   # default
-      )
-      bg     <- switch(th,
-                       "light"     = "#FFFFFF",
-                       "dark"      = "#2C2C2C",
-                       "ocean"     = "#E0F7FA",
-                       "solarized" = "#FDF6E3",
-                       "#F0F2F5"
-      )
-      txt    <- switch(th,
-                       "light"     = "#2C3E50",
-                       "dark"      = "#EEEEEE",
-                       "ocean"     = "#004D40",
-                       "solarized" = "#073642",
-                       "#2C3E50"
-      )
-      palette <- switch(th,
-                        "light"     = c("#2980B9",  # blue accent
-                                        "#27AE60",  # green
-                                        "#E67E22",  # orange
-                                        "#8E44AD"), # purple
-                        "dark"      = c("#E67E22",  # orange accent
-                                        "#3498DB",  # sky blue
-                                        "#2ECC71",  # bright green
-                                        "#9B59B6"), # magenta
-                        "ocean"     = c("#00796B",  # teal accent
-                                        "#0288D1",  # ocean blue
-                                        "#FF5722",  # coral
-                                        "#FFC107"), # amber
-                        "solarized" = c("#B58900",  # gold accent
-                                        "#268BD2",  # blue
-                                        "#2AA198",  # cyan
-                                        "#CB4B16"), # orange
-                        c("#2980B9","#27AE60","#E67E22","#8E44AD")
-      )
-      df_full <- dat$df
-      ylab    <- dat$ylab
-      
-      # For Average Score I already dropped zeros in activityData(),
-      # but here I want the same rule for all metrics:
-      df_active <- df_full[df_full$value > 0, ]
-      
-      # Compute summaries only on active days:
-      if (nrow(df_active) > 0) {
-        summary_avg <- round(mean(df_active$value), 2)
-        summary_med <- round(median(df_active$value), 2)
-        summary_min <- round(min(df_active$value), 2)
-        summary_max <- round(max(df_active$value), 2)
-      } else {
-        summary_avg <- summary_med <- summary_min <- summary_max <- 0
-      }
-      
-      # Base trace: lines+markers for counts/time; markers only for Average Score
-      base <- if (input$metric == "Average Score") {
-        plot_ly(
-          df_active,
-          x    = ~day, y = ~value,
-          type = 'scatter', mode = 'markers',
-          name = 'Daily Avg'
-        )
-      } else {
-        plot_ly(
-          df_full,
-          x    = ~day, y = ~value,
-          type = 'scatter', mode = 'lines+markers',
-          line   = list(color = accent),
-          marker = list(color = accent),
-          name = input$metric
-        )
-      }
-      
-      # Overlay summaries across full date axis
-      p <- base %>%
-        add_trace(
-          x = df_full$day,
-          y = rep(summary_avg, nrow(df_full)),
-          type = 'scatter',
-          mode = 'lines+markers',
-          name = sprintf("Avg (%.2f)", summary_avg),
-          line = list(dash = 'dash', color = palette[1]),
-          marker = list(color = palette[1]),
-          opacity = 1
-        ) %>%
-        add_trace(
-          x = df_full$day,
-          y = rep(summary_med, nrow(df_full)),
-          type = 'scatter',
-          mode = 'lines+markers',
-          name = sprintf("Med (%.2f)", summary_med),
-          line = list(dash = 'dot', color = palette[2]),
-          marker = list(color = palette[2]),
-          opacity = 1
-        ) %>%
-        add_trace(
-          x = df_full$day,
-          y = rep(summary_min, nrow(df_full)),
-          type = 'scatter',
-          mode = 'lines+markers',
-          name = sprintf("Min (%.2f)", summary_min),
-          line = list(dash = 'dashdot', color = palette[3]),
-          marker = list(color = palette[3]),
-          opacity = 1
-        ) %>%
-        add_trace(
-          x = df_full$day,
-          y = rep(summary_max, nrow(df_full)),
-          type = 'scatter',
-          mode = 'lines+markers',
-          name = sprintf("Max (%.2f)", summary_max),
-          line = list(dash = 'longdash', color = palette[4]),
-          marker = list(color = palette[4]),
-          opacity = 1
-        )
-      
-      
-      # Count how many active days vs. total days
-      total_days  <- nrow(df_full)
-      active_days <- nrow(df_active)
-      stats_text  <- sprintf(
-        "Active Days: %d/%d | Avg=%.2f | Med=%.2f | Min=%.2f | Max=%.2f",
-        active_days, total_days,
-        summary_avg, summary_med, summary_min, summary_max
-      )
-      
-      p %>% layout(
-        # Plot title configuration
-        title = list(
-          text    = paste(input$data_type, input$metric, "over Time"),
-          font    = list(size = 14),
-          x       = 0.5,          # center the title
-          xanchor = "center"
-        ),
-        
-        # Margins around the plotting area (in pixels)
-        margin = list(
-          t = 100,  # top margin to give space above the plot (for toolbar/annotations)
-          b = 80,   # bottom margin for x-axis title and legend
-          l = 80,   # left margin for y-axis title
-          r = 40    # right margin for any additional elements
-        ),
-        
-        # Plotly theme matching recolor
-        paper_bgcolor = bg,
-        plot_bgcolor  = bg,
-        font = list(color = txt),
-        
-        # Annotation for stats text
-        annotations = list(
-          list(
-            x       = 0.47,        # center of the plotting area
-            xref    = "paper",
-            xanchor = "center",   # anchor annotation by its center
-            y       = 1.12,       # just above the plot
-            yref    = "paper",
-            text    = stats_text,
-            showarrow = FALSE,
-            font    = list(size = 11)
+    req(input$data_type, input$metric, input$selected_week)
+    if (input$metric %in% c("Avg Quiz Score","Avg Assignment Score",
+                            "Max Quiz Score","Max Assignment Score")) {
+      return(plotly_empty(type = "scatter"))
+    }
+    
+    dat  <- activityData()
+    df   <- dat$df
+    ylab <- dat$ylab
+    wk   <- as.integer(input$selected_week)
+    
+    # Theme colors (unchanged) …
+    th <- credentials$theme
+    theme_colors <- switch(th,
+                           light     = list(bg="#FFFFFF", txt="#2C3E50", accent="#2980B9"),
+                           dark      = list(bg="#1E1E1E", txt="#FFFFFF", accent="#E67E22"),
+                           ocean     = list(bg="#E0F7FA", txt="#004D40", accent="#00796B"),
+                           solarized = list(bg="#FDF6E3", txt="#073642", accent="#B58900"),
+                           list(bg="#F0F2F5", txt="#2C3E50", accent="#2980B9")
+    )
+    
+    if (all(df$value == 0)) {
+      return(
+        plot_ly() %>%
+          layout(
+            xaxis = list(visible = FALSE),
+            yaxis = list(visible = FALSE),
+            annotations = list(list(
+              text = "No activity during this week",
+              showarrow = FALSE,
+              xref = "paper", yref = "paper",
+              x = 0.5, y = 0.5,
+              font = list(family = "system-ui", size = 16, color = theme_colors$txt)
+            )),
+            paper_bgcolor = theme_colors$bg,
+            plot_bgcolor  = theme_colors$bg,
+            margin = list(t = 120, b = 80, l = 80, r = 40),
+            font   = list(family = "system-ui", color = theme_colors$txt)
           )
+      )
+    }
+    
+    plot_ly(
+      df, x = ~day, y = ~value, type = "bar",
+      marker = list(color = theme_colors$accent),
+      hovertemplate = paste0("%{x|%b %d, %Y}<br>%{y:,} ", ylab, "<extra></extra>")
+    ) %>%
+      layout(
+        title = list(
+          text    = sprintf("Week %d<br>%s per Day", wk, ylab),
+          x       = 0.5,
+          xanchor = "center",
+          pad     = list(b = 15),
+          font    = list(family = "system-ui", size = 20, color = theme_colors$txt)
         ),
-        
-        # X-axis styling
-        xaxis = list(
-          title = list(
-            text     = "Date",       # label for the x-axis
-            font     = list(size = 12), # font size for x-axis label
-            standoff = 10            # padding (in pixels) between tick labels and axis title
-          ),
-          tickfont   = list(size = 10),  # font size for tick labels
-          automargin = TRUE              # let Plotly auto-adjust margins if labels get cut off
+        margin = list(t = 120, b = 80, l = 80, r = 40),
+        xaxis  = list(
+          title      = list(text = "Date", font = list(family = "system-ui", size = 14, color = theme_colors$txt)),
+          tickformat = "%b %d", dtick = "D1",
+          tickfont   = list(family = "system-ui", size = 12, color = theme_colors$txt)
         ),
-        
-        # Y-axis styling
         yaxis = list(
-          title = list(
-            text     = ylab,         # dynamic y-axis label (e.g., "Submissions")
-            font     = list(size = 12), # font size for y-axis label
-            standoff = 30            # padding between tick labels and axis title
-          ),
-          tickfont   = list(size = 10),  # font size for tick labels
-          automargin = TRUE              # auto-adjust margins if needed
+          title     = list(text = ylab, font = list(family = "system-ui", size = 14, color = theme_colors$txt)),
+          tickfont  = list(family = "system-ui", size = 12, color = theme_colors$txt),
+          rangemode = "tozero"
+          
         ),
-        
-        # Legend placement and styling
-        legend = list(
-          font        = list(size = 10), # font size for legend items
-          orientation = "h",             # horizontal layout
-          x           = 0.5,             # horizontal center of legend (in paper coords)
-          xanchor     = "center",        # anchor legend at its center horizontally
-          y           = -0.3             # vertical position into bottom margin (negative moves below plot)
-        ),
-        
-        # Hover label styling
-        hoverlabel = list(
-          font = list(size = 11)         # font size for hover tooltips
-        ),
-        
-        # Hover behavior
-        hovermode  = "x unified"         # show a single vertical tooltip box for all traces at the same x
-      )
-    })
+        plot_bgcolor  = theme_colors$bg,
+        paper_bgcolor = theme_colors$bg,
+        font          = list(family = "system-ui", color = theme_colors$txt)
+      ) %>%
+      config(responsive = TRUE)
   })
   
-  # Satisfaction input or plain text if saved
-  output$satisfaction_ui <- renderUI({
-    course <- selectedCourse()
-    week <- as.character(weekNumber())
-    saved <- !is.null(reflection_saved$data[[course]][[week]]) && reflection_saved$data[[course]][[week]]
+  # ———————————————————————————————————————
+  # Unified UI: either the chart or a one‐line summary
+  # ———————————————————————————————————————
+  output$activity_view <- renderUI({
+    req(input$data_type, input$metric, input$selected_week)
     
-    if (saved) {
-      value <- satisfaction_ratings$data[[course]][[week]]
-      div(class = "form-control-plaintext", paste("Self-Reported Satisfaction Score:", value))
-    } else {
-      sliderInput(
-        "satisfaction",
-        "How satisfied are you with your learning progress this week?",
-        min = 1, max = 10, value = 5,
-        width = "100%"
-      )
-    }
-  })
-  
-  # Expectation input or plain text if saved
-  output$expectation_ui <- renderUI({
-    course <- selectedCourse()
-    week <- as.character(weekNumber())
-    saved <- !is.null(reflection_saved$data[[course]][[week]]) && reflection_saved$data[[course]][[week]]
+    is_avg <- input$metric %in% c("Avg Quiz Score","Avg Assignment Score")
+    is_max <- input$metric %in% c("Max Quiz Score","Max Assignment Score")
     
-    if (saved) {
-      value <- expectation_ratings$data[[course]][[week]]
-      div(class = "form-control-plaintext", paste("Expected Progress Satisfaction:", value))
-    } else {
-      sliderInput(
-        "expectation",
-        "How satisfied do you expect to be with your learning progress next week?",
-        min = 1, max = 10, value = 5,
-        width = "100%"
-      )
-    }
-  })
-  
-  # Save or Update button
-  output$save_button_ui <- renderUI({
-    course <- selectedCourse()
-    week <- as.character(weekNumber())
-    saved <- !is.null(reflection_saved$data[[course]][[week]]) && reflection_saved$data[[course]][[week]]
-    
-    if (!saved) {
-      actionButton("save_rating", "Save Reflection", class = "btn btn-primary w-100 mt-2")
-    } else {
-      actionButton("refresh_rating", "Update Reflection", class = "btn btn-outline-primary w-100 mt-2")
-    }
-  })
-  
-  # Streak Badge
-  output$streak_badge <- renderUI({
-    course <- selectedCourse()
-    week <- as.character(weekNumber())
-    
-    if (is.null(reflection_saved$data[[course]]) ||
-        is.null(reflection_saved$data[[course]][[as.character(week)]]) ||
-        !reflection_saved$data[[course]][[as.character(week)]]) {
-      return(NULL)
-    }
-    
-    submitted_weeks <- sort(as.numeric(names(satisfaction_ratings$data[[course]])))
-    submitted_weeks <- submitted_weeks[submitted_weeks <= week]
-    
-    if (length(submitted_weeks) == 0) return(NULL)
-    
-    streak <- 0
-    for (w in week:1) {
-      if (w %in% submitted_weeks) {
-        streak <- streak + 1
+    if (is_avg || is_max) {
+      df  <- activityData()$df
+      df_nz <- df[df$value > 0, ]
+      
+      if (nrow(df_nz) == 0) {
+        txt <- "No submissions this week."
+        details <- NULL
       } else {
-        break
+        if (is_avg) {
+          avg <- round(mean(df_nz$value), 1)
+          avg_cls <- if (avg < 60) "bg-danger" else if (avg < 80) "bg-warning text-dark" else "bg-success"
+          txt <- HTML(paste0("<span class='badge ", avg_cls, " rounded-pill fs-5'>", avg, "%</span>"))
+        } else {
+          maxv <- round(max(df_nz$value), 1)
+          minv <- round(min(df_nz$value), 1)
+          max_cls <- if (maxv < 60) "bg-danger" else if (maxv < 80) "bg-warning text-dark" else "bg-success"
+          min_cls <- if (minv < 60) "bg-danger" else if (minv < 80) "bg-warning text-dark" else "bg-success"
+          txt <- HTML(paste0(
+            "<br/>Minimum: ",
+            "<span class='badge ", min_cls, " rounded-pill fs-5'>", minv, "%</span>",
+            "<br/>Maximum: ",
+            "<span class='badge ", max_cls, " rounded-pill fs-5'>", maxv, "%</span>"
+          ))
+        }
+        
+        details <- div(class = "mt-4",
+                       div("Daily scores:", class = "mb-3 fw-bold fs-5"),
+                       div(class = "list-group",
+                           lapply(seq_len(nrow(df_nz)), function(i) {
+                             score <- round(df_nz$value[i], 1)
+                             score_cls <- if (score < 60) "bg-danger"
+                             else if (score < 80) "bg-warning text-dark"
+                             else "bg-success"
+                             div(class = "list-group-item d-flex justify-content-between align-items-center",
+                                 span(format(df_nz$day[i], "%b %d"), class = "fs-5"),
+                                 span(paste0(score, "%"), class = paste("badge", score_cls, "rounded-pill fs-5"))
+                             )
+                           })
+                       )
+        )
       }
+      
+      title_text <- if (is_avg) {
+        h4(HTML(paste0("Week ", input$selected_week, "<br/>Average Score"))) 
+      } else { 
+        h4(HTML(paste0("Week ", input$selected_week, "<br/>Min & Max Scores")))
+      }
+      
+      tagList(
+        div(class = "weekly-summary text-center p-4",
+            title_text,
+            span(style = "font-size:2rem; font-weight:600;", HTML(txt))
+        ),
+        details
+      )
+    } else {
+      withSpinner(
+        plotlyOutput("activityPlot", height="400px", width="100%"),
+        type = 6, color = "#2980B9"
+      )
+    }
+  })
+  
+  # Single renderUI for satisfaction reflection card
+  output$reflections_card <- renderUI({
+    req(credentials$logged_in)
+    
+    course <- selectedCourse()
+    wk     <- as.character(weekNumber())
+    saved  <- isTRUE(reflection_saved$data[[course]][[wk]])
+    
+    tags$script(HTML("
+      $(function() {
+        ['satisfaction', 'expectation'].forEach(function(id) {
+          var $inp = $('#' + id);
+    
+          function updateLabel() {
+            var single = $inp.closest('.slider-with-value').find('.irs-single');
+            if (single.length) {
+              single.text($inp.val());
+            }
+          }
+    
+          $inp.on('input change', updateLabel);
+          setTimeout(updateLabel, 100); // wait for ion.rangeSlider to init
+        });
+      });
+    "))
+    
+    # Week label
+    week_label <- div(class = "mb-4 py-2",
+                      div(class = "h6", paste("Week", weekNumber())))
+    
+    # Satisfaction
+    sat_ui <- if (saved) {
+      div(class = "mb-4 py-2",
+          div(class = "p", paste(
+            "Self-Reported Satisfaction Score:",
+            satisfaction_ratings$data[[course]][[wk]]
+          )))
+    } else {
+      div(class = "mb-4 py-2 slider-with-value",
+          sliderInput(
+            "satisfaction",
+            "How satisfied are you with your learning progress this week?",
+            min = 1, max = 10, value = 5, width = "100%", ticks = FALSE
+          )
+      )
     }
     
-    if (streak >= 2) {
-      HTML(sprintf("<div class='alert alert-warning mt-3'>🏅 <strong>%d-Week Streak!</strong> Reflection badge for %d consecutive submissions.</div>", streak, streak))
+    # Expectation
+    exp_ui <- if (saved) {
+      div(class = "mb-4 py-2",
+          div(class = "p", 
+              paste("Expected Progress Satisfaction:",
+                    expectation_ratings$data[[course]][[wk]])))
     } else {
-      return(NULL)
+      div(class = "mb-4 py-2 slider-with-value",
+          sliderInput(
+            "expectation",
+            "How satisfied do you expect to be next week?",
+            min = 1, max = 10, value = 5, width = "100%", ticks = FALSE
+          )
+      )
     }
+    
+    # Save/Update button
+    btn_ui <- div(class = "d-grid gap-2 mb-4 py-2",
+                  if (!saved) {
+                    actionButton("save_rating", "Save Reflection",
+                                 class = "btn btn-primary")
+                  } else {
+                    actionButton("refresh_rating", "Update Reflection",
+                                 class = "btn btn-outline-primary")
+                  })
+    
+    # Feedback
+    fb_ui <- div(class = "mb-4 py-2", uiOutput("satisfaction_feedback"))
+    
+    # Streak badge
+    streak_ui <- {
+      submitted <- sort(as.numeric(names(satisfaction_ratings$data[[course]])))
+      submitted <- submitted[submitted <= weekNumber()]
+      streak <- 0L
+      for (w in weekNumber():1) {
+        if (w %in% submitted) streak <- streak + 1L else break
+      }
+      if (streak >= 2L) {
+        div(class = "alert alert-warning mb-4 py-2",
+            HTML(sprintf("🏅 <strong>%d-Week Streak!</strong> Reflection badge for %d weeks.", streak, streak))
+        )
+      } else NULL
+    }
+    
+    tagList(
+      week_label,
+      sat_ui,
+      exp_ui,
+      btn_ui,
+      fb_ui,
+      streak_ui
+    )
   })
   
   # Badges display
@@ -1711,12 +1190,12 @@ server <- function(input, output, session) {
     } else { 0 }
     
     badges <- list(
-      list(threshold = 1, unlocked_img = "ROOKIE.png", unlocked_tooltip = "Your first reflection - Nice start!", locked_tooltip = "Reflect for the first time."),
-      list(threshold = 4, unlocked_img = "CONSISTENT.png", unlocked_tooltip = "4 weeks of reflections - Keep reflecting!", locked_tooltip = "Reflect for 4 weeks."),
-      list(threshold = 8, unlocked_img = "MASTER.png", unlocked_tooltip = "8 weeks of reflecting?! – Good job!", locked_tooltip = "Reflect for 8 weeks."),
-      list(id = "selfaware", threshold = 1, unlocked_img = "SELF-AWARE.png", unlocked_tooltip = "You have completed all your activities - Nice start!", locked_tooltip = "Complete the activity tracker for the first time."),
-      list(id = "insightchampion", threshold = 2, unlocked_img = "INSIGHT.png", unlocked_tooltip = "You have finished your second block of activities - Very nice!", locked_tooltip = "Complete the activity tracker for the second time."),
-      list(id = "kingofwisdom", threshold = 4, unlocked_img = "KING.png", unlocked_tooltip = "You have complete all the activities for this course - Amazing!", locked_tooltip = "Complete all the activities for the entire course.")
+      list(threshold = 1, unlocked_img = "img/ROOKIE.png", unlocked_tooltip = "Your first reflection - Nice start!", locked_tooltip = "Reflect for the first time."),
+      list(threshold = 4, unlocked_img = "img/CONSISTENT.png", unlocked_tooltip = "4 weeks of reflections - Keep reflecting!", locked_tooltip = "Reflect for 4 weeks."),
+      list(threshold = 8, unlocked_img = "img/MASTER.png", unlocked_tooltip = "8 weeks of reflecting?! – Good job!", locked_tooltip = "Reflect for 8 weeks."),
+      list(id = "selfaware", threshold = 1, unlocked_img = "img/SELF-AWARE.png", unlocked_tooltip = "You have completed all your activities - Nice start!", locked_tooltip = "Complete the activity tracker for the first time."),
+      list(id = "insightchampion", threshold = 2, unlocked_img = "img/INSIGHT.png", unlocked_tooltip = "You have finished your second block of activities - Very nice!", locked_tooltip = "Complete the activity tracker for the second time."),
+      list(id = "kingofwisdom", threshold = 4, unlocked_img = "img/KING.png", unlocked_tooltip = "You have complete all the activities for this course - Amazing!", locked_tooltip = "Complete all the activities for the entire course.")
     )
     
     badge_html <- "<p><strong>Your Reflection Badges</strong></p><div class='badge-container'>"
@@ -1730,7 +1209,7 @@ server <- function(input, output, session) {
       if (unlocked) {
         badge_html <- paste0(badge_html, "<span class='badge-item' data-tooltip='", b$unlocked_tooltip, "'><img src='", b$unlocked_img, "' height='90px'/></span>")
       } else {
-        badge_html <- paste0(badge_html, "<span class='badge-item' data-tooltip='", b$locked_tooltip, "'><img src='QUESTION.png' height='90px'/></span>")
+        badge_html <- paste0(badge_html, "<span class='badge-item' data-tooltip='", b$locked_tooltip, "'><img src='img/QUESTION.png' height='90px'/></span>")
       }
     }
     badge_html <- paste0(badge_html, "</div>")
@@ -1747,7 +1226,7 @@ server <- function(input, output, session) {
       "27893" = "0HV90-2024",
       "27974" = "0HV100-2024",
       "Unknown Course"
-    ) %>% paste("Self-Regulated Learning Reflection Dashboard")
+    ) %>% paste("<br/>Self-Regulated Learning Reflection Dashboard")
   })
   
   output$current_week_display <- renderText({

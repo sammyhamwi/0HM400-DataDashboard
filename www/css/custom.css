@@ -1,0 +1,620 @@
+/*──────────────────────────────────────────────*/
+/* Base & Transitions                           */
+/*──────────────────────────────────────────────*/
+html,
+body {
+  background-color: #F0F2F5;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+html, body,
+.header-banner, .sidebar, .card, .section-title,
+.list-group-item, .btn, .btn-outline-primary,
+input, select, .input-group-text {
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
+
+/*──────────────────────────────────────────────*/
+/* Header Banner                                */
+/*──────────────────────────────────────────────*/
+.header-banner {
+  display: flex;
+  align-items: center;
+  padding: 1rem 2rem;
+  margin-bottom: 0;
+  background: linear-gradient(90deg, #2C3E50, #2980B9);
+  color: #fff;
+}
+
+.header-banner h3 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  flex-grow: 1;
+}
+
+.header-banner .btn-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFC7C7 !important;
+  border-color: #FFA3A3 !important;
+  color: #800 !important;
+}
+
+.header-banner .btn-logout:hover {
+  background: #FFA3A3 !important;
+  border-color: #FF8A8A !important;
+  color: #600 !important;
+}
+
+.header-banner .btn-outline-light {
+  margin-right: 1rem;
+  padding: 0.5rem 0.75rem;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  background: transparent;
+}
+
+.header-banner .btn-outline-light i {
+  color: inherit !important;
+}
+
+/*──────────────────────────────────────────────*/
+/* Sidebar                                      */
+/*──────────────────────────────────────────────*/
+.sidebar {
+  background: #2C3E50;
+  padding: 2rem 1rem;
+  height: calc(100vh - 3.5rem);
+  position: sticky;
+  top: 3.5rem;
+}
+
+.sidebar h5,
+.sidebar .theme-selector {
+  text-align: center;
+}
+
+.sidebar h5 {
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #ECF0F1;
+}
+
+.sidebar .list-group-item {
+  display: block;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #1A252F;
+  border-radius: 0.5rem;
+  background: #34495E;
+  color: #ECF0F1;
+  font-weight: 500;
+}
+
+.sidebar .list-group-item:hover {
+  background: #2980B9;
+  color: #fff;
+  border-color: #2980B9;
+}
+
+.sidebar .list-group-item.active {
+  background: #E67E22;
+  border-color: #E67E22;
+  color: #fff;
+}
+
+.sidebar .list-group-item.active:hover {
+  background: #E67E22 !important;
+  color: #fff !important;
+}
+
+/*──────────────────────────────────────────────*/
+/* Main Content & Cards                         */
+/*──────────────────────────────────────────────*/
+.main-content {
+  padding: 1.5rem 2rem 1rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+  overflow: visible !important;
+  position: relative;
+  border-left: 5px solid #2980B9;
+}
+
+.section-title {
+  margin-bottom: 0.75rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #E67E22;
+}
+
+/* Utility spacing inside cards */
+.mb-4 {
+  margin-bottom: 1.5rem !important;
+}
+
+.mb-3 {
+  margin-bottom: 1rem !important;
+}
+
+.p {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+/*────────────────────────────────────*/
+/* Reflections card – extra spacing   */
+/*────────────────────────────────────*/
+.reflections-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.reflections-card > * {
+  margin-bottom: 1.5rem;
+}
+
+.reflections-card > *:last-child {
+  margin-bottom: 0;
+}
+
+.reflections-card .irs--shiny {
+  margin-bottom: 2rem;
+}
+
+.reflections-card .btn {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+}
+
+/*──────────────────────────────────────────────*/
+/* Login Card                                   */
+/*──────────────────────────────────────────────*/
+.login-card {
+  max-width: 400px;
+  margin: 10% auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-card .shiny-input-container {
+  width: 100%;
+  max-width: 300px;
+  margin-bottom: 1rem;
+}
+
+.login-card .btn {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 1rem;
+  background: #E67E22;
+  border-color: #E67E22;
+}
+
+.login-card .btn:hover {
+  background: #2980B9;
+  border-color: #2980B9;
+}
+
+/*──────────────────────────────────────────────*/
+/* Sliders (ion.rangeSlider / shinycssloaders)  */
+/*──────────────────────────────────────────────*/
+.irs--shiny {
+  margin-bottom: 2rem;
+}
+
+.irs--shiny .irs-bar,
+.irs--shiny .irs-single {
+  height: 0.75rem;
+  border-radius: 0.4rem;
+}
+
+.irs--shiny .irs-from,
+.irs--shiny .irs-to {
+  font-size: 0.9rem;
+}
+
+/*──────────────────────────────────────────────*/
+/* Theme‐aware slider accents                   */
+/*──────────────────────────────────────────────*/
+html.theme-default .irs--shiny .irs-bar,
+html.theme-default .irs--shiny .irs-handle {
+  background: #E67E22 !important;
+  border-color: #E67E22 !important;
+}
+
+html.theme-light .irs--shiny .irs-bar,
+html.theme-light .irs--shiny .irs-handle {
+  background: #2980B9 !important;
+  border-color: #2980B9 !important;
+}
+
+html.theme-dark .irs--shiny .irs-bar,
+html.theme-dark .irs--shiny .irs-handle {
+  background: #E67E22 !important;
+  border-color: #E67E22 !important;
+}
+
+html.theme-ocean .irs--shiny .irs-bar,
+html.theme-ocean .irs--shiny .irs-handle {
+  background: #00796B !important;
+  border-color: #00796B !important;
+}
+
+html.theme-solarized .irs--shiny .irs-bar,
+html.theme-solarized .irs--shiny .irs-handle {
+  background: #B58900 !important;
+  border-color: #B58900 !important;
+}
+
+/*──────────────────────────────────────────────*/
+/* Badge & List‐Group Styling                   */
+/*──────────────────────────────────────────────*/
+.badge-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  justify-items: center;
+  padding: 1rem 0;
+}
+
+.badge-item {
+  position: relative;
+  display: inline-block;
+  margin: 0.5em;
+  cursor: pointer;
+}
+
+.badge-item[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(60, 60, 60, 0.9);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 999;
+}
+
+.badge-item[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+.list-group-item {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #d0d0d0 !important;
+  border-radius: 0.5rem !important;
+  margin-bottom: 0.5rem;
+  box-shadow: none !important;
+}
+
+.list-group {
+  padding-left: 0;
+}
+
+.list-group-item.text-success {
+  background: #DFF0D8 !important;
+  color: #2C3E50 !important;
+}
+
+.list-group-item.text-muted {
+  background: #FDEDEC !important;
+  color: #C0392B !important;
+}
+
+.badge {
+  font-size: 1.5rem;
+  padding: 0.5rem 1rem;
+}
+
+.btn-primary {
+  background: #E67E22;
+  border-color: #E67E22;
+}
+
+.btn-primary:hover {
+  background: #2980B9;
+  border-color: #2980B9;
+}
+
+.btn-outline-primary {
+  color: #E67E22;
+  border-color: #E67E22;
+}
+
+.btn-outline-primary:hover {
+  background: #E67E22;
+  color: #fff;
+}
+
+/*──────────────────────────────────────────────*/
+/* Plotly container & title tweaks              */
+/*──────────────────────────────────────────────*/
+#activityPlot,
+#activityPlot .plot-container,
+#activityPlot .js-plotly-plot {
+  transition: width 0.3s ease, height 0.3s ease !important;
+}
+
+.plotly .g-plot-title {
+  font-family: system-ui;
+  font-size: 1.8rem !important;
+  font-weight: 700 !important;
+}
+
+/*──────────────────────────────────────────────*/
+/* Theme Palettes: html.theme-<name>            */
+/*──────────────────────────────────────────────*/
+html.theme-default {}
+
+html.theme-light {
+  background: #fff !important;
+  color: #2C3E50 !important;
+}
+
+html.theme-light body {
+  background: #fff !important;
+}
+
+html.theme-light .sidebar {
+  background: #F0F0F0 !important;
+}
+
+html.theme-light .card {
+  border-left-color: #2980B9 !important;
+}
+
+html.theme-light .header-banner {
+  background: linear-gradient(90deg, #F0F0F0, #F0F0F1) !important;
+  color: #2C3E50 !important;
+}
+
+html.theme-light .section-title {
+  color: #2980B9 !important;
+}
+
+html.theme-light .sidebar .list-group-item {
+  background: #F8F9FA !important;
+  color: #2C3E50 !important;
+  border-color: #D0D0D0 !important;
+}
+
+html.theme-light .sidebar .list-group-item.active,
+html.theme-light .sidebar .list-group-item.active:hover {
+  background: #2980B9 !important;
+  color: #fff !important;
+  border-color: #2980B9 !important;
+}
+
+html.theme-dark {
+  background: #2C2C2C !important;
+  color: #EEE !important;
+}
+
+html.theme-dark body {
+  background: #2C2C2C !important;
+}
+
+html.theme-dark .sidebar {
+  background: #3A3A3A !important;
+}
+
+html.theme-dark .card {
+  background: #3A3A3A !important;
+  border-left-color: #E67E22 !important;
+  color: #EEE !important;
+}
+
+html.theme-dark .header-banner {
+  background: linear-gradient(90deg, #111, #333) !important;
+  color: #E67E22 !important;
+}
+
+html.theme-dark .section-title {
+  color: #E67E22 !important;
+}
+
+html.theme-dark .sidebar .list-group-item {
+  background: #3A3A3A !important;
+  color: #EEE !important;
+  border-color: #444 !important;
+}
+
+html.theme-dark .sidebar .list-group-item.active,
+html.theme-dark .sidebar .list-group-item.active:hover {
+  background: #E67E22 !important;
+  color: #222 !important;
+  border-color: #E67E22 !important;
+}
+
+html.theme-ocean {
+  background: #E0F7FA !important;
+}
+
+html.theme-ocean body {
+  background: #E0F7FA !important;
+}
+
+html.theme-ocean .sidebar {
+  background: #004D40 !important;
+}
+
+html.theme-ocean .card {
+  border-left-color: #00796B !important;
+}
+
+html.theme-ocean .header-banner {
+  background: linear-gradient(90deg, #004D40, #00796B) !important;
+  color: #E0F7FA !important;
+}
+
+html.theme-ocean .section-title {
+  color: #004D40 !important;
+}
+
+html.theme-ocean .sidebar .list-group-item {
+  background: #004D40 !important;
+  color: #E0F7FA !important;
+  border-color: #00695C !important;
+}
+
+html.theme-ocean .sidebar .list-group-item.active,
+html.theme-ocean .sidebar .list-group-item.active:hover {
+  background: #00796B !important;
+  color: #fff !important;
+  border-color: #00796B !important;
+}
+
+html.theme-solarized {
+  background: #FDF6E3 !important;
+}
+
+html.theme-solarized body {
+  background: #FDF6E3 !important;
+}
+
+html.theme-solarized .sidebar {
+  background: #073642 !important;
+}
+
+html.theme-solarized .card {
+  border-left-color: #268BD2 !important;
+}
+
+html.theme-solarized .header-banner {
+  background: linear-gradient(90deg, #073642, #586E75) !important;
+  color: #EEE8D5 !important;
+}
+
+html.theme-solarized .section-title {
+  color: #B58900 !important;
+}
+
+html.theme-solarized .sidebar .list-group-item {
+  background: #073642 !important;
+  color: #EEE8D5 !important;
+  border-color: #586E75 !important;
+}
+
+html.theme-solarized .sidebar .list-group-item.active,
+html.theme-solarized .sidebar .list-group-item.active:hover {
+  background: #B58900 !important;
+  color: #073642 !important;
+  border-color: #B58900 !important;
+}
+
+/*──────────────────────────────────────────────*/
+/* .list-group-item theme matcher               */
+/*──────────────────────────────────────────────*/
+html.theme-light .list-group-item {
+  background: #fff !important;
+  color: #2C3E50 !important;
+  border-color: #D0D0D0 !important;
+}
+
+html.theme-dark .list-group-item {
+  background: #444 !important;
+  color: #EEE !important;
+  border-color: #555 !important;
+}
+
+html.theme-ocean .list-group-item {
+  background: #E0F2F1 !important;
+  color: #004D40 !important;
+  border-color: #00796B !important;
+}
+
+html.theme-solarized .list-group-item {
+  background: #FDF6E3 !important;
+  color: #073642 !important;
+  border-color: #586E75 !important;
+}
+
+/*──────────────────────────────────────────────*/
+/* button theme matcher                         */
+/*──────────────────────────────────────────────*/
+html.theme-light .btn-outline-primary {
+  color: #2980B9 !important;
+  border-color: #2980B9 !important;
+}
+
+html.theme-light .btn-outline-primary:hover {
+  background: #2980B9 !important;
+  color: #fff !important;
+}
+
+html.theme-dark .btn-outline-primary {
+  color: #E67E22 !important;
+  border-color: #E67E22 !important;
+}
+
+html.theme-dark .btn-outline-primary:hover {
+  background: #E67E22 !important;
+  color: #222 !important;
+}
+
+html.theme-ocean .btn-outline-primary {
+  color: #00796B !important;
+  border-color: #00796B !important;
+}
+
+html.theme-ocean .btn-outline-primary:hover {
+  background: #00796B !important;
+  color: #fff !important;
+}
+
+html.theme-solarized .btn-outline-primary {
+  color: #B58900 !important;
+  border-color: #B58900 !important;
+}
+
+html.theme-solarized .btn-outline-primary:hover {
+  background: #B58900 !important;
+  color: #073642 !important;
+}
+
+/*──────────────────────────────────────────────*/
+/* Sliders w/ live value under the handle       */
+/*──────────────────────────────────────────────*/
+.irs-grid-text {
+  color: #666;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.slider-with-value .irs-single {
+  background: none !important;
+  color: #666 !important;
+  font-size: 14px !important;
+  font-weight: normal !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-align: center !important;
+  margin-top: 3.5em !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
