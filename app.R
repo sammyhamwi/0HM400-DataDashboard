@@ -28,8 +28,11 @@ ui <- fluidPage(
       class = "card login-card",
       h4("Login", class = "text-center mb-5"),
       textInput("user_id_input", "User ID", placeholder = "Enter your User ID"),
-      dateInput("date_input",   "Select Date",
-                value = Sys.Date(), format = "yyyy-mm-dd"),
+      selectInput(
+        "week_input", "Select Week",
+        choices = setNames(1:10, paste("Week", 1:10)),
+        selected = 1
+      ),
       actionButton("login_button", "Login",
                    class = "btn btn-primary mt-3")
     ),
@@ -172,14 +175,14 @@ server <- function(input, output, session) {
   
   # Handle login
   observeEvent(input$login_button, {
-    req(input$user_id_input, input$date_input)
+    req(input$user_id_input, input$week_input)
     
     shinyjs::hide("login_panel")
     shinyjs::show("main_panel")
     
     credentials$logged_in <- TRUE
     credentials$user_id <- input$user_id_input
-    credentials$date <- input$date_input
+    credentials$date <- COURSE_START_DATE + (as.numeric(input$week_input) - 1) * 7
     
     # load saved theme (if any)
     prefs_file <- "all_users_data.json"
@@ -230,9 +233,10 @@ server <- function(input, output, session) {
     reflection_saved$data <- list()
   })
   
-  observeEvent(input$date_input, {
+  observeEvent(input$week_input, {
     req(credentials$logged_in)
-    credentials$date <- input$date_input
+    credentials$date <- COURSE_START_DATE + (as.numeric(input$week_input) - 1) * 7
+    
     
     # auto-start activity graph exactly as on login:
     updateSelectInput(session, "data_type",
@@ -958,13 +962,26 @@ server <- function(input, output, session) {
           layout(
             xaxis = list(visible = FALSE),
             yaxis = list(visible = FALSE),
-            annotations = list(list(
-              text = "No activity during this week",
-              showarrow = FALSE,
-              xref = "paper", yref = "paper",
-              x = 0.5, y = 0.5,
-              font = list(family = "system-ui", size = 16, color = theme_colors$txt)
-            )),
+            annotations = list(
+              list(
+                text        = "<b>No activity this week</b>",
+                showarrow   = FALSE,
+                xref        = "paper", 
+                yref        = "paper",
+                x           = 0.5, 
+                y           = 0.5,
+                font        = list(
+                  family = "system-ui",
+                  size   = 20,
+                  color  = theme_colors$accent
+                ),
+                align       = "center",
+                bgcolor     = "rgba(255, 255, 255, 0.8)",
+                bordercolor = theme_colors$accent,
+                borderwidth = 2,
+                borderpad   = 6
+              )
+            ),
             paper_bgcolor = theme_colors$bg,
             plot_bgcolor  = theme_colors$bg,
             margin = list(t = 120, b = 80, l = 80, r = 40),
@@ -1039,20 +1056,30 @@ server <- function(input, output, session) {
           ))
         }
         
-        details <- div(class = "mt-4",
-                       div("Daily scores:", class = "mb-3 fw-bold fs-5"),
-                       div(class = "list-group",
-                           lapply(seq_len(nrow(df_nz)), function(i) {
-                             score <- round(df_nz$value[i], 1)
-                             score_cls <- if (score < 60) "bg-danger"
-                             else if (score < 80) "bg-warning text-dark"
-                             else "bg-success"
-                             div(class = "list-group-item d-flex justify-content-between align-items-center",
-                                 span(format(df_nz$day[i], "%b %d"), class = "fs-5"),
-                                 span(paste0(score, "%"), class = paste("badge", score_cls, "rounded-pill fs-5"))
-                             )
-                           })
-                       )
+        details <- div(
+          class = "small-daily-scores mt-4",
+          div("Daily scores:", class = "mb-3 fw-bold"),
+          div(
+            class = "list-group",
+            lapply(seq_len(nrow(df_nz)), function(i) {
+              score <- round(df_nz$value[i], 1)
+              score_cls <- if (score < 60) {
+                "bg-danger"
+              } else if (score < 80) {
+                "bg-warning text-dark"
+              } else {
+                "bg-success"
+              }
+              div(
+                class = "list-group-item d-flex justify-content-between align-items-center",
+                span(format(df_nz$day[i], "%b %d")),
+                span(
+                  paste0(score, "%"),
+                  class = paste("badge", score_cls, "rounded-pill")
+                )
+              )
+            })
+          )
         )
       }
       

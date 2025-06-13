@@ -618,3 +618,13 @@ html.theme-solarized .btn-outline-primary:hover {
   pointer-events: none !important;
   z-index: 2 !important;
 }
+
+/*─────────────────────────────────────────────────────────*/
+/* make daily‐scores list and badges substantially smaller */
+/*─────────────────────────────────────────────────────────*/
+.small-daily-scores .list-group-item {
+  font-size: 0.7rem !important;
+}
+.small-daily-scores .badge {
+  font-size: 0.7rem !important;
+}
