@@ -26,6 +26,12 @@ input, select, .input-group-text {
   margin-bottom: 0;
   background: linear-gradient(90deg, #2C3E50, #2980B9);
   color: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
+  height: 4rem;
 }
 
 .header-banner h3 {
@@ -65,12 +71,21 @@ input, select, .input-group-text {
 /*──────────────────────────────────────────────*/
 /* Sidebar                                      */
 /*──────────────────────────────────────────────*/
+#sidebar_col {
+  position: fixed;
+  top: 4rem;
+  left: 0;
+  width: 25%;
+  height: calc(100vh - 4rem);
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
 .sidebar {
   background: #2C3E50;
   padding: 2rem 1rem;
-  height: calc(100vh - 3.5rem);
-  position: sticky;
-  top: 3.5rem;
+  height: 100%;
+  width: 100%;
 }
 
 .sidebar h5,
@@ -116,18 +131,37 @@ input, select, .input-group-text {
 /*──────────────────────────────────────────────*/
 /* Main Content & Cards                         */
 /*──────────────────────────────────────────────*/
+#main_col {
+  transition: all 0.3s ease;
+  padding-top: 4rem;
+  margin-left: 25%; /* Default position when sidebar is visible */
+}
+
+#main_col.sidebar-collapsed {
+  margin-left: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+#main_col.sidebar-expanded {
+  margin-left: 25%;
+  width: 75% !important;
+  max-width: 75% !important;
+}
+
 .main-content {
-  padding: 1.5rem 2rem 1rem;
+  padding: 1rem 2rem 1rem;
+  min-height: calc(100vh - 4rem);
 }
 
 .card {
   background: #fff;
-  border-radius: 1rem;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
-  margin-bottom: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1rem;
   overflow: visible !important;
   position: relative;
-  border-left: 5px solid #2980B9;
+  border-left: 4px solid #2980B9;
 }
 
 .section-title {
@@ -299,6 +333,87 @@ html.theme-solarized .irs--shiny .irs-handle {
 
 .badge-item[data-tooltip]:hover::after {
   opacity: 1;
+}
+
+/* Horizontal badges for top area */
+.horizontal-badge-container {
+  min-height: 110px;
+  padding: 1.25rem 0;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.badge-item-horizontal {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 50%;
+  padding: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.badge-item-horizontal:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.badge-item-horizontal img {
+  display: block;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.badge-item-horizontal[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(60, 60, 60, 0.95);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 1002;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.badge-item-horizontal[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(60, 60, 60, 0.95);
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 1002;
+}
+
+.badge-item-horizontal[data-tooltip]:hover::after,
+.badge-item-horizontal[data-tooltip]:hover::before {
+  opacity: 1;
+}
+
+/* Badges strip styling */
+.badges-strip {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.03), rgba(220, 53, 69, 0.03));
+  border-radius: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
 }
 
 .list-group-item {
@@ -627,4 +742,246 @@ html.theme-solarized .btn-outline-primary:hover {
 }
 .small-daily-scores .badge {
   font-size: 0.7rem !important;
+}
+
+/*──────────────────────────────────────────────*/
+/* Weekly Overview Module Styling               */
+/*──────────────────────────────────────────────*/
+.controls-section {
+  background: rgba(41, 128, 185, 0.05);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(41, 128, 185, 0.1);
+}
+
+.weekly-summary-section {
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.03), rgba(155, 89, 182, 0.03));
+  border-radius: 1rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(52, 152, 219, 0.1);
+}
+
+.weekly-summary-section h5 {
+  color: #2980B9;
+  font-weight: 600;
+}
+
+.detailed-view-section {
+  background: rgba(236, 240, 241, 0.3);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(189, 195, 199, 0.2);
+}
+
+.detailed-view-section h5 {
+  color: #7F8C8D;
+  font-weight: 600;
+}
+
+/* Enhanced card styling for summary metrics */
+.weekly-summary .card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.weekly-summary .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Alert styling improvements */
+.alert-sm {
+  font-size: 0.9rem;
+  border-radius: 0.5rem;
+}
+
+/* Controls section improvements */
+.controls-section .form-label {
+  font-weight: 600;
+  color: #2C3E50;
+  margin-bottom: 0.5rem;
+}
+
+.controls-section .form-select {
+  border-radius: 0.5rem;
+  border: 1px solid #BDC3C7;
+}
+
+.controls-section .form-select:focus {
+  border-color: #2980B9;
+  box-shadow: 0 0 0 0.2rem rgba(41, 128, 185, 0.25);
+}
+
+/* Layout adjustments - ensure proper positioning */
+.container-fluid .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Handle the top level row containing sidebar and main */
+.main-panel > .row {
+  position: relative;
+}
+
+/* Remove Bootstrap column padding that creates empty space */
+#sidebar_col,
+#main_col {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Override any container max-width that might constrain layout */
+.container-fluid {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Make sure content fits without scrolling */
+body {
+  overflow-x: hidden;
+}
+
+/* Compact spacing adjustments */
+.mb-3 {
+  margin-bottom: 0.75rem !important;
+}
+
+.mb-4 {
+  margin-bottom: 1rem !important;
+}
+
+/* Reduce padding in weekly overview sections */
+.weekly-summary-section,
+.detailed-view-section {
+  padding: 0.75rem !important;
+}
+
+.controls-section {
+  padding: 0.75rem !important;
+}
+
+/* Cache Status Styling */
+#cache_status .alert {
+  margin-bottom: 0;
+  font-size: 0.9rem;
+}
+
+#cache_progress {
+  margin-top: 10px;
+}
+
+#cache_progress .progress {
+  background-color: #e9ecef;
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+#cache_progress .progress-bar {
+  background: linear-gradient(45deg, #28a745, #20c997);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.6s ease;
+}
+
+#progress_message {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-top: 0.5rem;
+  min-height: 1.2rem;
+}
+
+.login-card hr {
+  border-color: #dee2e6;
+  opacity: 0.5;
+}
+
+/* Cache Footer Styling */
+.cache-footer {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.cache-footer .card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(41, 128, 185, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cache-footer .btn-outline-success {
+  border-color: #28a745;
+  color: #28a745;
+}
+
+.cache-footer .btn-outline-success:hover {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+/* Cached Users List Styling */
+.cached-users-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-height: 2rem;
+  align-items: flex-start;
+}
+
+.cached-users-container .badge {
+  cursor: help;
+  transition: transform 0.2s ease;
+}
+
+.cached-users-container .badge:hover {
+  transform: scale(1.05);
+}
+
+.cache-footer .btn-outline-secondary {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-color: #6c757d;
+  color: #6c757d;
+}
+
+.cache-footer .btn-outline-secondary:hover {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: white;
+}
+
+/* Cache Interface Toggle Button */
+#toggle_cache_interface {
+  transition: all 0.3s ease;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+}
+
+#toggle_cache_interface:hover {
+  background-color: rgba(108, 117, 125, 0.1);
+  color: #495057 !important;
+}
+
+#cache_chevron {
+  transition: transform 0.3s ease;
+  margin-left: 0.5rem;
+}
+
+/* Cache interface content animation */
+#cache_interface_content {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
